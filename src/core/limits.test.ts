@@ -53,4 +53,24 @@ describe('checkLimits', () => {
     expect(result.accepted.map(f => f.fileName)).toEqual(['a.pdf'])
     expect(result.rejected.map(f => f.fileName)).toEqual(['b.pdf', 'c.pdf'])
   })
+
+  it('單檔大小恰好等於上限時應該接受，不是拒絕', () => {
+    const result = checkLimits({
+      currentPageCount: 0,
+      currentTotalBytes: 0,
+      incoming: [file('exact.pdf', LIMITS.maxFileBytes, 1)],
+    })
+    expect(result.accepted.map(f => f.fileName)).toEqual(['exact.pdf'])
+    expect(result.rejected).toEqual([])
+  })
+
+  it('同時踩到頁數與總位元組上限時，先回報頁數超限', () => {
+    const result = checkLimits({
+      currentPageCount: 99,
+      currentTotalBytes: LIMITS.maxTotalBytes - 10,
+      incoming: [file('both.pdf', 100, 5)],
+    })
+    expect(result.accepted).toEqual([])
+    expect(result.rejected).toEqual([{ fileName: 'both.pdf', reason: 'limit-pages' }])
+  })
 })
