@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PDFDocument } from 'pdf-lib'
 import { exportToPdf } from './exporter'
+import { A4_LONG, A4_SHORT } from './imageToPage'
 import type { LoadedPdf, Page, Rotation } from '../types'
 
 const fixture = (name: string) => new Uint8Array(readFileSync(join(__dirname, '../../tests/fixtures', name)))
@@ -85,6 +86,34 @@ describe('exportToPdf', () => {
 
   it('頁面清單為空時丟出明確的錯誤', async () => {
     await expect(exportToPdf({ pages: [], loadedFiles: {} })).rejects.toThrow('沒有可匯出的頁面')
+  })
+
+  it('影像來源的頁面被排進混合清單的正確位置', async () => {
+    const jpeg = new Blob([fixture('landscape.jpg')])
+    const bytes = await exportToPdf({
+      pages: [
+        pdfPage('p1', 'a', 0),
+        { id: 'img', source: { kind: 'image', blob: jpeg }, rotation: 0, selected: false },
+        pdfPage('p2', 'a', 1),
+      ],
+      loadedFiles: { a: three },
+    })
+    const out = await PDFDocument.load(bytes)
+    expect(out.getPageCount()).toBe(3)
+    // 第 2 頁來自橫向 JPEG，所以是橫向 A4
+    expect(out.getPage(1).getWidth()).toBeCloseTo(A4_LONG, 1)
+    expect(out.getPage(1).getHeight()).toBeCloseTo(A4_SHORT, 1)
+  })
+
+  it('只有一張影像時也能匯出', async () => {
+    const png = new Blob([fixture('portrait.png')])
+    const bytes = await exportToPdf({
+      pages: [{ id: 'img', source: { kind: 'image', blob: png }, rotation: 90, selected: false }],
+      loadedFiles: {},
+    })
+    const out = await PDFDocument.load(bytes)
+    expect(out.getPageCount()).toBe(1)
+    expect(out.getPage(0).getRotation().angle).toBe(90)
   })
 
   it('引用了不存在的 fileId 時丟出明確的錯誤', async () => {

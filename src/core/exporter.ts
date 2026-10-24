@@ -1,4 +1,5 @@
 import { PDFDocument, degrees } from 'pdf-lib'
+import { appendImagePage } from './imageToPage'
 import type { LoadedPdf, Page } from '../types'
 
 export type ExportInput = {
@@ -24,8 +25,10 @@ export async function exportToPdf({ pages, loadedFiles }: ExportInput): Promise<
   }
 
   for (const page of pages) {
-    if (page.source.kind !== 'pdf') {
-      throw new Error('此版本的 exporter 只支援 PDF 來源的頁面')
+    if (page.source.kind === 'image') {
+      const bytes = new Uint8Array(await page.source.blob.arrayBuffer())
+      await appendImagePage(out, bytes, page.rotation)
+      continue
     }
     const source = await getSource(page.source.fileId)
     const [copied] = await out.copyPages(source, [page.source.pageIndex])
