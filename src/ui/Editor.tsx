@@ -5,7 +5,7 @@ import { ErrorBanner } from './ErrorBanner'
 import { ActionBar } from './ActionBar'
 import { loadIncomingFiles } from '../loadFiles'
 import { exportToPdf } from '../core/exporter'
-import { outputFileName, type ExportedFile } from '../core/output'
+import { outputFileName, renderImageToJpeg, type ExportedFile } from '../core/output'
 import type { DocumentState } from '../types'
 import type { DocumentAction } from '../state/documentReducer'
 import type { ToolDefinition } from '../tools'
@@ -59,11 +59,17 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
       // 必須先取出成變數，直接寫 pages[0].source.blob 不會被 TS 窄化
       const single = pages.length === 1 ? pages[0] : null
       if (format === 'jpg' && single && single.source.kind === 'image') {
-        onExported({ blob: single.source.blob, fileName: outputFileName(new Date(), 'jpg'), pageCount: 1 })
+        const blob = await renderImageToJpeg(single.source.blob, single.rotation)
+        if (!mounted.current) return
+        onExported({ blob, fileName: outputFileName(new Date(), 'jpg'), pageCount: 1 })
         return
       }
       const bytes = await exportToPdf({ pages, loadedFiles: state.loadedFiles })
-      const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
+      // pdf-lib 的 save() 實際回傳一般 ArrayBuffer，但型別標成 ArrayBufferLike
+      // （理論上可能是 SharedArrayBuffer），直接傳給 Blob 會型別不符。
+      // 用斷言而不是 new Uint8Array(bytes)，後者會把整份 PDF 再複製一次。
+      const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' })
+      if (!mounted.current) return
       onExported({ blob, fileName: outputFileName(new Date(), 'pdf'), pageCount: pages.length })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '匯出失敗')

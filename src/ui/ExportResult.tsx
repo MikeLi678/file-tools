@@ -13,9 +13,11 @@ export function ExportResult({ file, onBackToEditor, onHome }: Props) {
 
   // 不要 await 後才呼叫 shareFile——它內部需要同步進入 navigator.share
   const handleSave = () => {
-    shareFile(file).then(result => {
-      if (result !== 'cancelled') setDone(true)
-    })
+    shareFile(file)
+      .then(result => {
+        if (result !== 'cancelled') setDone(true)
+      })
+      .catch(() => window.alert('儲存失敗，請再試一次'))
   }
 
   return (

@@ -1,3 +1,6 @@
+import { LIMITS } from './limits'
+import type { Rotation } from '../types'
+
 export type ExportedFile = {
   blob: Blob
   fileName: string
@@ -55,7 +58,39 @@ export async function shareFile(file: ExportedFile): Promise<'shared' | 'cancell
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
-  // 立刻 revoke 會讓部分瀏覽器來不及開始下載
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  // 放寬到 60 秒。iOS Safari 對大檔會先跳確認框，太早 revoke 會讓下載失敗。
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
   return 'downloaded'
+}
+
+/**
+ * 把影像 blob 依旋轉重繪成真正的 JPEG。
+ *
+ * 不能直接把來源 blob 當輸出：來源可能是 PNG（命名成 .jpg 會內容與副檔名不符），
+ * 而且使用者施加的旋轉完全不會反映出來，與「旋轉後匯出 PDF」的行為不一致。
+ */
+export async function renderImageToJpeg(blob: Blob, rotation: Rotation): Promise<Blob> {
+  const bitmap = await createImageBitmap(blob)
+  const swap = rotation === 90 || rotation === 270
+  const canvas = document.createElement('canvas')
+  canvas.width = swap ? bitmap.height : bitmap.width
+  canvas.height = swap ? bitmap.width : bitmap.height
+  const context = canvas.getContext('2d')
+  if (!context) {
+    bitmap.close()
+    throw new Error('無法取得 canvas context')
+  }
+  // 白底，否則 PNG 的透明區域在 JPEG 會變成黑色
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.translate(canvas.width / 2, canvas.height / 2)
+  context.rotate((rotation * Math.PI) / 180)
+  context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
+  bitmap.close()
+
+  const output = await new Promise<Blob | null>(resolve =>
+    canvas.toBlob(resolve, 'image/jpeg', LIMITS.jpegQuality),
+  )
+  if (!output) throw new Error('影像輸出失敗')
+  return output
 }
