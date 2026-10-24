@@ -1,0 +1,88 @@
+import { checkLimits } from './core/limits'
+import { loadPdf } from './core/pdfLoader'
+import { detectImageType } from './core/imageToPage'
+import { totalLoadedBytes } from './state/documentReducer'
+import { newId } from './ids'
+import type { DocumentState, LoadError, LoadErrorReason, LoadedPdf, Page } from './types'
+import type { DocumentAction } from './state/documentReducer'
+
+export const ERROR_MESSAGES: Record<LoadErrorReason, string> = {
+  encrypted: '此 PDF 有密碼保護，無法處理',
+  corrupt: '此檔案無法讀取，可能已損壞',
+  empty: '此 PDF 沒有任何頁面',
+  'decode-failed': '此照片格式無法處理，請改用 JPEG 或 PNG',
+  'file-too-large': '單一檔案不能超過 50 MB',
+  'limit-pages': '加入後會超過 100 頁的上限',
+  'limit-total-bytes': '加入後會超過 200 MB 的總量上限',
+}
+
+type LoadPayload = Extract<DocumentAction, { type: 'load' }>
+
+/**
+ * 把使用者選的檔案轉成一個 load action。
+ * 先讀取並得知每份 PDF 的頁數，才能做頁數上限的判定，
+ * 所以順序是「全部讀完 -> 檢查上限 -> 組出 action」。
+ */
+export async function loadIncomingFiles(files: File[], state: DocumentState): Promise<LoadPayload> {
+  const errors: LoadError[] = []
+  const pdfs: { file: LoadedPdf; bytes: number }[] = []
+  const images: { name: string; blob: Blob; bytes: number }[] = []
+
+  for (const file of files) {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      const result = await loadPdf(newId(), file.name, bytes)
+      if (result.ok) pdfs.push({ file: result.file, bytes: bytes.byteLength })
+      else errors.push(result.error)
+      continue
+    }
+
+    // HEIC 等瀏覽器不一定能解碼的格式，在這裡就先試一次 decode。
+    // iOS Safari 走系統解碼器可以過，Android Chrome 會失敗。
+    const decodable = detectImageType(bytes) !== 'unknown' || (await canDecode(file))
+    if (!decodable) {
+      errors.push({ fileName: file.name, reason: 'decode-failed' })
+      continue
+    }
+    images.push({ name: file.name, blob: file, bytes: bytes.byteLength })
+  }
+
+  const check = checkLimits({
+    currentPageCount: state.pages.length,
+    currentTotalBytes: totalLoadedBytes(state),
+    incoming: [
+      ...pdfs.map(p => ({ fileName: p.file.name, bytes: p.bytes, pageCount: p.file.pageCount })),
+      ...images.map(i => ({ fileName: i.name, bytes: i.bytes, pageCount: 1 })),
+    ],
+  })
+
+  const acceptedNames = new Set(check.accepted.map(f => f.fileName))
+  const pages: Page[] = []
+  const acceptedFiles: LoadedPdf[] = []
+
+  for (const { file } of pdfs) {
+    if (!acceptedNames.has(file.name)) continue
+    acceptedFiles.push(file)
+    for (let i = 0; i < file.pageCount; i++) {
+      pages.push({ id: newId(), source: { kind: 'pdf', fileId: file.fileId, pageIndex: i }, rotation: 0, selected: false })
+    }
+  }
+
+  for (const image of images) {
+    if (!acceptedNames.has(image.name)) continue
+    pages.push({ id: newId(), source: { kind: 'image', blob: image.blob }, rotation: 0, selected: false })
+  }
+
+  return { type: 'load', pages, files: acceptedFiles, errors: [...errors, ...check.rejected] }
+}
+
+async function canDecode(file: File): Promise<boolean> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    bitmap.close()
+    return true
+  } catch {
+    return false
+  }
+}
