@@ -201,8 +201,13 @@ body {
   bottom: 0;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  padding: 12px 0 calc(env(safe-area-inset-bottom) + 12px);
+  /* 背景與上框線要橫跨整個螢幕寬，否則捲動時縮圖會從工具列兩側露出來。
+     負 margin 抵銷 .app 的左右 padding，等量的 padding 再把內容推回原位。 */
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right)));
   margin-top: auto;
+  padding: 12px max(16px, env(safe-area-inset-right))
+    calc(env(safe-area-inset-bottom) + 12px) max(16px, env(safe-area-inset-left));
 }
 
 .action-row {

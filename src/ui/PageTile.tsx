@@ -66,6 +66,27 @@ export function PageTile({
     onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => event.stopPropagation(),
   }
 
+  // 勾選模式下覆寫 dnd-kit 給的 role 與鍵盤行為。
+  // 根 div 預設是 role="button" + tabIndex=0，Space 與 Enter 歸 KeyboardSensor 管
+  // （拿起項目），所以鍵盤使用者按不到勾選，螢幕閱讀器聽到的也是「可拖曳的按鈕」
+  // 而不是勾選框。這裡改成 checkbox 語意並自己處理按鍵——
+  // 這個 onKeyDown 會蓋掉 containerProps 裡 dnd-kit 的同名 handler，
+  // 等於勾選模式下停用鍵盤拖曳，換取鍵盤可以勾選。這是刻意的取捨。
+  const selectModeProps = selectMode
+    ? {
+        role: 'checkbox',
+        'aria-checked': page.selected,
+        'aria-label': `第 ${index + 1} 頁`,
+        'aria-roledescription': undefined,
+        'aria-describedby': undefined,
+        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key !== ' ' && event.key !== 'Enter') return
+          event.preventDefault()
+          onToggleSelect(page.id)
+        },
+      }
+    : {}
+
   return (
     <div
       ref={containerRef}
@@ -81,6 +102,7 @@ export function PageTile({
       data-testid="page-tile"
       data-page-index={index}
       {...containerProps}
+      {...selectModeProps}
     >
       <div className="page-thumb">
         {url && !failed && <img src={url} alt={`第 ${index + 1} 頁`} draggable={false} />}
@@ -90,7 +112,7 @@ export function PageTile({
       <span className="page-number" aria-hidden="true">{index + 1}</span>
       {selectMode ? (
         <div className="tile-actions">
-          <span className="select-mark">{page.selected ? '已勾選' : '未勾選'}</span>
+          <span className="select-mark" aria-hidden="true">{page.selected ? '已勾選' : '未勾選'}</span>
         </div>
       ) : (
         <div className="tile-actions">
