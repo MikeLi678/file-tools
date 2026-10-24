@@ -290,6 +290,9 @@ body {
 }
 
 .crop-handle { fill: #fff; stroke: #2563eb; stroke-width: 3; vector-effect: non-scaling-stroke; }
+/* 看不見的命中區，讓裁切點符合 iOS 的 44pt 最小點擊目標 */
+.crop-hit { fill: transparent; stroke: none; cursor: grab; }
+.crop-hit:active { cursor: grabbing; }
 
 .filter-row { display: flex; gap: 8px; }
 .source-button.active { border-color: var(--accent); color: var(--accent); }

@@ -92,6 +92,10 @@ export function ScannerView({ onCaptured, onCancel }: Props) {
     if (stage.name !== 'crop') return
     setWorking(true)
     try {
+      // 下面的 warpPerspective 與 applyFilter 是同步的重運算，會把主執行緒擋住。
+      // 不先讓出一次 paint 的話，上面剛設的「處理中」永遠不會被畫出來，
+      // 使用者按下去會覺得沒反應。
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)))
       const size = estimateOutputSize(stage.quad)
       const warped = warpPerspective(stage.frame, stage.quad, size.width, size.height)
       const filtered = applyFilter(warped, stage.filter)
