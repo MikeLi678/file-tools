@@ -1,0 +1,84 @@
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --border: #e4e4e7;
+  --text: #18181b;
+  --muted: #71717a;
+  --accent: #2563eb;
+  --danger: #dc2626;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-title { font-size: 20px; margin: 24px 0 16px; }
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-height: 96px;
+}
+
+.tool-card strong { display: block; font-size: 16px; margin-bottom: 6px; }
+.tool-card span { color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-header h1 { font-size: 17px; margin: 0; flex: 1; }
+.editor-header .count { color: var(--muted); font-size: 13px; }
+
+.back-button,
+.text-button {
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--accent);
+  padding: 8px;
+  margin: -8px;
+  cursor: pointer;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 48px 16px;
+}
