@@ -1,13 +1,19 @@
 import {
   DndContext,
-  PointerSensor,
+  KeyboardSensor,
+  MouseSensor,
   TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { PageTile } from './PageTile'
 import type { LoadedPdf, Page } from '../types'
@@ -25,7 +31,13 @@ export function PageGrid({ pages, loadedFiles, thumbnailer, onMove }: Props) {
     // 觸控需要延遲門檻，否則單指點擊會被判定成拖曳，
     // 縮圖上的旋轉與刪除按鈕就按不到了。
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // 用 MouseSensor 而不是 PointerSensor。PointerSensor 在觸控裝置上一樣會收到
+    // pointerdown，手指按住 50ms 再橫向移動就繞過上面的 200ms 門檻直接開始拖曳，
+    // 讓縮圖上的按鈕永遠按不到（已用 hasTouch 的瀏覽器 context 實測確認）。
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // 根 div 帶著 dnd-kit 的 role="button" 與 tabIndex=0。沒有 KeyboardSensor 的話
+    // 它可聚焦卻無作用，而 aria-describedby 還會告訴螢幕閱讀器「按空白鍵拿起項目」。
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {

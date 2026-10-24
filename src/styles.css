@@ -170,4 +170,4 @@ body {
   z-index: 2;
 }
 
-.page-grid { touch-action: pan-y; }
+.page-grid { touch-action: pan-y pinch-zoom; }
