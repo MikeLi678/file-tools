@@ -22,7 +22,10 @@ body {
   max-width: 640px;
   margin: 0 auto;
   min-height: 100vh;
-  padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
+  /* dvh 會扣掉 iOS Safari 的動態網址列，100vh 留給不支援的舊瀏覽器 */
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right))
+    calc(env(safe-area-inset-bottom) + 16px) max(16px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
 }
@@ -50,6 +53,10 @@ body {
 .tool-card strong { display: block; font-size: 16px; margin-bottom: 6px; }
 .tool-card span { color: var(--muted); font-size: 13px; line-height: 1.4; }
 
+.tool-card:active {
+  background: var(--bg);
+}
+
 .editor-header {
   display: flex;
   align-items: center;
@@ -67,8 +74,12 @@ body {
   border: none;
   font: inherit;
   color: var(--accent);
-  padding: 8px;
-  margin: -8px;
+  /* iOS 建議最小 44pt 點擊目標。負 margin 抵銷 padding，讓視覺位置不變但命中區變大 */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: -8px -12px;
   cursor: pointer;
 }
 
