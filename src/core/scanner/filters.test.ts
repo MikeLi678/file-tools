@@ -124,4 +124,65 @@ describe('mono', () => {
     const out = applyFilter(solid(40, 40, [235, 235, 235]), 'mono')
     for (let i = 0; i < out.data.length; i += 4) expect(out.data[i]).toBe(255)
   })
+
+  it('一側偏暗的照片不會整片變黑（自適應二值化的存在理由）', () => {
+    // 模擬斜照光：亮度從左側 90 線性漸變到右側 240，上面放兩個深色方塊當文字
+    const size = 200
+    const img = solid(size, size, [0, 0, 0])
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const v = Math.round(90 + (150 * x) / (size - 1))
+        const i = (y * size + x) * 4
+        img.data[i] = v
+        img.data[i + 1] = v
+        img.data[i + 2] = v
+      }
+    }
+    // 暗側與亮側各放一個 20x20 的深色方塊
+    const putBlock = (left: number, top: number) => {
+      for (let y = top; y < top + 20; y++) {
+        for (let x = left; x < left + 20; x++) {
+          const i = (y * size + x) * 4
+          img.data[i] = 30
+          img.data[i + 1] = 30
+          img.data[i + 2] = 30
+        }
+      }
+    }
+    putBlock(30, 90)
+    putBlock(150, 90)
+
+    const out = applyFilter(img, 'mono')
+    const at = (x: number, y: number) => out.data[(y * size + x) * 4]
+
+    // 暗側的背景必須是白的。全圖單一門檻會把這裡整片判成黑
+    expect(at(20, 20)).toBe(255)
+    expect(at(20, 180)).toBe(255)
+    // 亮側的背景也是白的
+    expect(at(180, 20)).toBe(255)
+    // 兩側的方塊都要被判成黑
+    expect(at(40, 100)).toBe(0)
+    expect(at(160, 100)).toBe(0)
+  })
+
+  it('遠離原點的像素也判定正確（守住積分影像查詢公式的最後一項）', () => {
+    // 測試點選在 x>15 且 y>15 的位置，讓 boxMean 的 integral[y0*stride+x0] 這一項
+    // 不為零。影像要夠大，那一項的誤差才足以翻轉判定。
+    const size = 100
+    const img = solid(size, size, [200, 200, 200])
+    for (let y = 60; y < 70; y++) {
+      for (let x = 60; x < 70; x++) {
+        const i = (y * size + x) * 4
+        img.data[i] = 20
+        img.data[i + 1] = 20
+        img.data[i + 2] = 20
+      }
+    }
+
+    const out = applyFilter(img, 'mono')
+    const at = (x: number, y: number) => out.data[(y * size + x) * 4]
+
+    expect(at(65, 65)).toBe(0)
+    expect(at(10, 10)).toBe(255)
+  })
 })
