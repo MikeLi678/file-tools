@@ -20,6 +20,8 @@ type Props = {
   containerProps?: HTMLAttributes<HTMLDivElement>
   onRotate: (pageId: string) => void
   onRemove: (pageId: string) => void
+  selectMode: boolean
+  onToggleSelect: (pageId: string) => void
 }
 
 export function PageTile({
@@ -32,6 +34,8 @@ export function PageTile({
   containerProps,
   onRotate,
   onRemove,
+  selectMode,
+  onToggleSelect,
 }: Props) {
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
@@ -65,7 +69,15 @@ export function PageTile({
   return (
     <div
       ref={containerRef}
-      className={dragging ? 'page-tile dragging' : 'page-tile'}
+      className={[
+        'page-tile',
+        dragging ? 'dragging' : '',
+        selectMode && page.selected ? 'selected' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={selectMode ? () => onToggleSelect(page.id) : undefined}
+      data-selected={page.selected}
       data-testid="page-tile"
       data-page-index={index}
       {...containerProps}
@@ -76,26 +88,32 @@ export function PageTile({
         {failed && <span className="thumb-placeholder">縮圖失敗</span>}
       </div>
       <span className="page-number" aria-hidden="true">{index + 1}</span>
-      <div className="tile-actions">
-        <button
-          className="tile-button"
-          aria-label={`旋轉第 ${index + 1} 頁`}
-          data-testid="rotate"
-          {...stopDrag}
-          onClick={() => onRotate(page.id)}
-        >
-          旋轉
-        </button>
-        <button
-          className="tile-button danger"
-          aria-label={`刪除第 ${index + 1} 頁`}
-          data-testid="remove"
-          {...stopDrag}
-          onClick={() => onRemove(page.id)}
-        >
-          刪除
-        </button>
-      </div>
+      {selectMode ? (
+        <div className="tile-actions">
+          <span className="select-mark">{page.selected ? '已勾選' : '未勾選'}</span>
+        </div>
+      ) : (
+        <div className="tile-actions">
+          <button
+            className="tile-button"
+            aria-label={`旋轉第 ${index + 1} 頁`}
+            data-testid="rotate"
+            {...stopDrag}
+            onClick={() => onRotate(page.id)}
+          >
+            旋轉
+          </button>
+          <button
+            className="tile-button danger"
+            aria-label={`刪除第 ${index + 1} 頁`}
+            data-testid="remove"
+            {...stopDrag}
+            onClick={() => onRemove(page.id)}
+          >
+            刪除
+          </button>
+        </div>
+      )}
     </div>
   )
 }

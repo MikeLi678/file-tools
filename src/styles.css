@@ -195,3 +195,54 @@ body {
 
 .tile-button:last-child { border-right: none; }
 .tile-button.danger { color: var(--danger); }
+
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 12px 0 calc(env(safe-area-inset-bottom) + 12px);
+  margin-top: auto;
+}
+
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  min-height: 24px;
+}
+
+.primary-button {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.primary-button:disabled { background: #a1a1aa; }
+
+.action-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
+.page-tile.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+.select-mark {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  padding: 8px 2px;
+  color: var(--muted);
+}
+
+.page-tile.selected .select-mark { color: var(--accent); }

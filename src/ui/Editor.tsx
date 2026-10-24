@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SourceBar } from './SourceBar'
 import { PageGrid } from './PageGrid'
 import { ErrorBanner } from './ErrorBanner'
+import { ActionBar } from './ActionBar'
 import { loadIncomingFiles } from '../loadFiles'
 import type { DocumentState } from '../types'
 import type { DocumentAction } from '../state/documentReducer'
@@ -62,6 +63,22 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera }:
           onMove={(from, to) => dispatch({ type: 'move', from, to })}
           onRotate={pageId => dispatch({ type: 'rotate', pageId })}
           onRemove={pageId => dispatch({ type: 'remove', pageId })}
+          selectMode={state.selectMode}
+          onToggleSelect={pageId => dispatch({ type: 'toggleSelect', pageId })}
+        />
+      )}
+
+      {state.pages.length > 0 && (
+        <ActionBar
+          selectMode={state.selectMode}
+          totalPages={state.pages.length}
+          selectedCount={state.pages.filter(p => p.selected).length}
+          onToggleMode={on => dispatch({ type: 'setSelectMode', on })}
+          onInvert={() => dispatch({ type: 'invertSelection' })}
+          onExport={() => window.alert('匯出在下一個 task 實作')}
+          exporting={false}
+          jpegAvailable={false}
+          onExportJpeg={() => {}}
         />
       )}
     </>

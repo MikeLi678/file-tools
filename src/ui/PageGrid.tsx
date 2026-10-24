@@ -26,9 +26,11 @@ type Props = {
   onMove: (from: number, to: number) => void
   onRotate: (pageId: string) => void
   onRemove: (pageId: string) => void
+  selectMode: boolean
+  onToggleSelect: (pageId: string) => void
 }
 
-export function PageGrid({ pages, loadedFiles, thumbnailer, onMove, onRotate, onRemove }: Props) {
+export function PageGrid({ pages, loadedFiles, thumbnailer, onMove, onRotate, onRemove, selectMode, onToggleSelect }: Props) {
   const sensors = useSensors(
     // 觸控需要延遲門檻，否則單指點擊會被判定成拖曳，
     // 縮圖上的旋轉與刪除按鈕就按不到了。
@@ -64,6 +66,8 @@ export function PageGrid({ pages, loadedFiles, thumbnailer, onMove, onRotate, on
               thumbnailer={thumbnailer}
               onRotate={onRotate}
               onRemove={onRemove}
+              selectMode={selectMode}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>
@@ -79,9 +83,11 @@ type TileProps = {
   thumbnailer: Thumbnailer
   onRotate: (pageId: string) => void
   onRemove: (pageId: string) => void
+  selectMode: boolean
+  onToggleSelect: (pageId: string) => void
 }
 
-function SortablePageTile({ page, index, loadedFiles, thumbnailer, onRotate, onRemove }: TileProps) {
+function SortablePageTile({ page, index, loadedFiles, thumbnailer, onRotate, onRemove, selectMode, onToggleSelect }: TileProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
 
   return (
@@ -92,6 +98,8 @@ function SortablePageTile({ page, index, loadedFiles, thumbnailer, onRotate, onR
       thumbnailer={thumbnailer}
       onRotate={onRotate}
       onRemove={onRemove}
+      selectMode={selectMode}
+      onToggleSelect={onToggleSelect}
       dragging={isDragging}
       containerRef={setNodeRef}
       containerProps={{
