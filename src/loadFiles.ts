@@ -1,4 +1,5 @@
-import { checkLimits } from './core/limits'
+import { checkLimits, LIMITS } from './core/limits'
+import type { IncomingFile } from './core/limits'
 import { loadPdf } from './core/pdfLoader'
 import { detectImageType } from './core/imageToPage'
 import { totalLoadedBytes } from './state/documentReducer'
@@ -23,18 +24,33 @@ type LoadPayload = Extract<DocumentAction, { type: 'load' }>
  * 先讀取並得知每份 PDF 的頁數，才能做頁數上限的判定，
  * 所以順序是「全部讀完 -> 檢查上限 -> 組出 action」。
  */
+type PendingEntry =
+  | { kind: 'pdf'; incoming: IncomingFile; file: LoadedPdf }
+  | { kind: 'image'; incoming: IncomingFile; blob: Blob }
+
 export async function loadIncomingFiles(files: File[], state: DocumentState): Promise<LoadPayload> {
   const errors: LoadError[] = []
-  const pdfs: { file: LoadedPdf; bytes: number }[] = []
-  const images: { name: string; blob: Blob; bytes: number }[] = []
+  const pdfs: PendingEntry[] = []
+  const images: PendingEntry[] = []
 
   for (const file of files) {
+    // 先用 size 擋掉超大檔案，避免整個讀進記憶體才被拒絕
+    if (file.size > LIMITS.maxFileBytes) {
+      errors.push({ fileName: file.name, reason: 'file-too-large' })
+      continue
+    }
+
     const bytes = new Uint8Array(await file.arrayBuffer())
 
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       const result = await loadPdf(newId(), file.name, bytes)
-      if (result.ok) pdfs.push({ file: result.file, bytes: bytes.byteLength })
-      else errors.push(result.error)
+      if (result.ok) {
+        pdfs.push({
+          kind: 'pdf',
+          file: result.file,
+          incoming: { fileName: file.name, bytes: bytes.byteLength, pageCount: result.file.pageCount },
+        })
+      } else errors.push(result.error)
       continue
     }
 
@@ -45,33 +61,36 @@ export async function loadIncomingFiles(files: File[], state: DocumentState): Pr
       errors.push({ fileName: file.name, reason: 'decode-failed' })
       continue
     }
-    images.push({ name: file.name, blob: file, bytes: bytes.byteLength })
+    images.push({
+      kind: 'image',
+      blob: file,
+      incoming: { fileName: file.name, bytes: bytes.byteLength, pageCount: 1 },
+    })
   }
 
+  // PDF 在前、影像在後；checkLimits 依序判定
+  const entries = [...pdfs, ...images]
   const check = checkLimits({
     currentPageCount: state.pages.length,
     currentTotalBytes: totalLoadedBytes(state),
-    incoming: [
-      ...pdfs.map(p => ({ fileName: p.file.name, bytes: p.bytes, pageCount: p.file.pageCount })),
-      ...images.map(i => ({ fileName: i.name, bytes: i.bytes, pageCount: 1 })),
-    ],
+    incoming: entries.map(entry => entry.incoming),
   })
 
-  const acceptedNames = new Set(check.accepted.map(f => f.fileName))
+  // 用物件參考而非檔名比對——同名檔案必須能被分別判定
+  const acceptedSet = new Set(check.accepted)
   const pages: Page[] = []
   const acceptedFiles: LoadedPdf[] = []
 
-  for (const { file } of pdfs) {
-    if (!acceptedNames.has(file.name)) continue
-    acceptedFiles.push(file)
-    for (let i = 0; i < file.pageCount; i++) {
-      pages.push({ id: newId(), source: { kind: 'pdf', fileId: file.fileId, pageIndex: i }, rotation: 0, selected: false })
+  for (const entry of entries) {
+    if (!acceptedSet.has(entry.incoming)) continue
+    if (entry.kind === 'pdf') {
+      acceptedFiles.push(entry.file)
+      for (let i = 0; i < entry.file.pageCount; i++) {
+        pages.push({ id: newId(), source: { kind: 'pdf', fileId: entry.file.fileId, pageIndex: i }, rotation: 0, selected: false })
+      }
+    } else {
+      pages.push({ id: newId(), source: { kind: 'image', blob: entry.blob }, rotation: 0, selected: false })
     }
-  }
-
-  for (const image of images) {
-    if (!acceptedNames.has(image.name)) continue
-    pages.push({ id: newId(), source: { kind: 'image', blob: image.blob }, rotation: 0, selected: false })
   }
 
   return { type: 'load', pages, files: acceptedFiles, errors: [...errors, ...check.rejected] }

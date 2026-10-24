@@ -32,7 +32,7 @@ export function PageTile({ page, index, loadedFiles, thumbnailer }: Props) {
   return (
     <div className="page-tile">
       <div className="page-thumb">
-        {url && <img src={url} alt={`第 ${index + 1} 頁`} />}
+        {url && !failed && <img src={url} alt={`第 ${index + 1} 頁`} />}
         {!url && !failed && <span className="thumb-placeholder">載入中</span>}
         {failed && <span className="thumb-placeholder">縮圖失敗</span>}
       </div>
