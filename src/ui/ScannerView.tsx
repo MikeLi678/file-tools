@@ -19,6 +19,9 @@ type Stage =
 export function ScannerView({ onCaptured, onCancel }: Props) {
   const [stage, setStage] = useState<Stage>({ name: 'opening' })
   const [working, setWorking] = useState(false)
+  // 相機串流接上之後，第一格畫面還要一點時間才會到。
+  // 在那之前 videoWidth 是 0，按拍攝只會得到「相機還沒準備好」的錯誤。
+  const [frameReady, setFrameReady] = useState(false)
   const [frameUrl, setFrameUrl] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -54,6 +57,8 @@ export function ScannerView({ onCaptured, onCancel }: Props) {
   useEffect(() => {
     if (stage.name === 'preview' && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current
+      // 重拍會讓 video 重新掛載，要重新等第一格畫面
+      setFrameReady((videoRef.current?.readyState ?? 0) >= 2)
     }
   }, [stage.name])
 
@@ -176,12 +181,14 @@ export function ScannerView({ onCaptured, onCancel }: Props) {
       </header>
 
       <div className="camera-stage">
-        <video ref={videoRef} autoPlay playsInline muted data-testid="camera-preview" />
-        {stage.name === 'opening' && <p className="empty-state">正在開啟相機</p>}
+        <video ref={videoRef} autoPlay playsInline muted data-testid="camera-preview"
+          onLoadedData={() => setFrameReady(true)}
+        />
+        {!frameReady && <p className="empty-state">正在開啟相機</p>}
       </div>
 
       <div className="action-bar">
-        <button className="primary-button" disabled={stage.name !== 'preview'} onClick={capture}>
+        <button className="primary-button" disabled={stage.name !== 'preview' || !frameReady} onClick={capture}>
           拍攝
         </button>
       </div>
