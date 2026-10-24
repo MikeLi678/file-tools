@@ -4,7 +4,8 @@ import { Editor } from './ui/Editor'
 import { ExportResult } from './ui/ExportResult'
 import { ScannerView } from './ui/ScannerView'
 import { newId } from './ids'
-import { documentReducer, initialDocumentState } from './state/documentReducer'
+import { documentReducer, initialDocumentState, totalLoadedBytes } from './state/documentReducer'
+import { checkLimits } from './core/limits'
 import { createThumbnailer } from './core/thumbnailer'
 import { findTool, type ToolId } from './tools'
 import type { ExportedFile } from './core/output'
@@ -62,11 +63,19 @@ export function App() {
       <div className="app">
         <ScannerView
           onCaptured={blob => {
+            // 掃描也要走同一套上限，否則相機可以無限往 pages 推
+            const check = checkLimits({
+              currentPageCount: state.pages.length,
+              currentTotalBytes: totalLoadedBytes(state),
+              incoming: [{ fileName: '掃描頁', bytes: blob.size, pageCount: 1 }],
+            })
             dispatch({
               type: 'load',
-              pages: [{ id: newId(), source: { kind: 'image', blob }, rotation: 0, selected: false }],
+              pages: check.accepted.length
+                ? [{ id: newId(), source: { kind: 'image', blob }, rotation: 0, selected: false }]
+                : [],
               files: [],
-              errors: [],
+              errors: check.rejected,
             })
             setView({ name: 'editor', tool: view.tool })
           }}

@@ -14,7 +14,7 @@ describe('checkLimits', () => {
     expect(result.rejected).toEqual([])
   })
 
-  it('單檔超過 50 MB 時只拒絕那一檔，其他照常接受', () => {
+  it('單檔超過單檔上限 時只拒絕那一檔，其他照常接受', () => {
     const result = checkLimits({
       currentPageCount: 0,
       currentTotalBytes: 0,

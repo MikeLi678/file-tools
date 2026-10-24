@@ -2,8 +2,11 @@ import type { LoadError } from '../types'
 
 export const LIMITS = {
   maxPages: 100,
-  maxFileBytes: 50 * 1024 * 1024,
-  maxTotalBytes: 200 * 1024 * 1024,
+  // 實測：186 MB 輸入在匯出時峰值到 754 MB JS heap（倍率 4-5x，同一份位元組在
+  // loadedFiles、pdf.js worker、PDFDocument 物件圖、save() 輸出各存一份）。
+  // iOS Safari 數百 MB 就會回收分頁，而本 app 不留存狀態，被殺即全部歸零。
+  maxFileBytes: 25 * 1024 * 1024,
+  maxTotalBytes: 80 * 1024 * 1024,
   thumbnailWidth: 200,
   thumbnailMaxScale: 2,
   thumbnailConcurrency: 3,

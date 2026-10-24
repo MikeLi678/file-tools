@@ -163,3 +163,16 @@ test('拖曳重新排序後，匯出的頁序跟著改變', async ({ page }) => 
   expect(isLandscape(1)).toBe(false)
   expect(isLandscape(2)).toBe(false)
 })
+
+test('來源頁本身有旋轉時，縮圖方向與匯出一致', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('rotated-90.pdf')])
+  await expect(page.locator('.page-thumb img')).toHaveCount(1)
+
+  // rotated-90.pdf 的唯一一頁 /Rotate = 90，所以顯示上是橫向，縮圖也必須是橫向
+  const landscape = await page.locator('.page-thumb img').first().evaluate(
+    (img: HTMLImageElement) => img.naturalWidth > img.naturalHeight,
+  )
+  expect(landscape).toBe(true)
+})

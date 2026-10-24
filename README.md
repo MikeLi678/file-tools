@@ -24,6 +24,8 @@ npm run e2e                          # Playwright，瀏覽器流程
 npx tsc -b                           # 型別檢查（用 -b，不要用 --noEmit）
 ```
 
+型別檢查用 `npx tsc -b`，本專案不使用 linter。
+
 E2E 的前置條件（全新環境必做）：
 
 ```bash

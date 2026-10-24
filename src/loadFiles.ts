@@ -12,9 +12,9 @@ export const ERROR_MESSAGES: Record<LoadErrorReason, string> = {
   corrupt: '此檔案無法讀取，可能已損壞',
   empty: '此 PDF 沒有任何頁面',
   'decode-failed': '此照片格式無法處理，請改用 JPEG 或 PNG',
-  'file-too-large': '單一檔案不能超過 50 MB',
-  'limit-pages': '加入後會超過 100 頁的上限',
-  'limit-total-bytes': '加入後會超過 200 MB 的總量上限',
+  'file-too-large': `單一檔案不能超過 ${LIMITS.maxFileBytes / 1024 / 1024} MB`,
+  'limit-pages': `加入後會超過 ${LIMITS.maxPages} 頁的上限`,
+  'limit-total-bytes': `加入後會超過 ${LIMITS.maxTotalBytes / 1024 / 1024} MB 的總量上限`,
 }
 
 type LoadPayload = Extract<DocumentAction, { type: 'load' }>
@@ -40,7 +40,15 @@ export async function loadIncomingFiles(files: File[], state: DocumentState): Pr
       continue
     }
 
-    const bytes = new Uint8Array(await file.arrayBuffer())
+    let bytes: Uint8Array
+    try {
+      bytes = new Uint8Array(await file.arrayBuffer())
+    } catch {
+      // iOS 上尚未下載的 iCloud 檔案、或讀取途中被系統回收的相簿照片會走到這裡。
+      // 不接住的話整批 reject，使用者看到的是「按了沒反應」。
+      errors.push({ fileName: file.name, reason: 'corrupt' })
+      continue
+    }
 
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       const result = await loadPdf(newId(), file.name, bytes)

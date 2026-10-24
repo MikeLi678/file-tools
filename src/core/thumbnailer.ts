@@ -63,9 +63,13 @@ export function createThumbnailer(): Thumbnailer {
   async function renderPdfPage(page: Page & { source: { kind: 'pdf' } }, file: LoadedPdf): Promise<string> {
     const doc = await getDocument(file)
     const pdfPage = await doc.getPage(page.source.pageIndex + 1)
-    const base = pdfPage.getViewport({ scale: 1 })
+    // pdf.js 的 getViewport({ rotation }) 是「取代」頁面自身的 /Rotate，不是疊加。
+    // Page.rotation 是使用者施加的相對旋轉，所以要自己先加起來，
+    // 否則來源頁有 /Rotate 時，縮圖方向會與匯出結果永遠差 90 度的倍數。
+    const effective = (((pdfPage.rotate + page.rotation) % 360) + 360) % 360
+    const base = pdfPage.getViewport({ scale: 1, rotation: effective })
     const scale = targetWidth() / base.width
-    const viewport = pdfPage.getViewport({ scale, rotation: page.rotation })
+    const viewport = pdfPage.getViewport({ scale, rotation: effective })
     const canvas = document.createElement('canvas')
     canvas.width = Math.ceil(viewport.width)
     canvas.height = Math.ceil(viewport.height)

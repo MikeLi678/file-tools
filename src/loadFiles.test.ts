@@ -45,4 +45,14 @@ describe('loadIncomingFiles 的上限判定', () => {
     expect(action.pages).toHaveLength(3)
     expect(action.errors).toEqual([{ fileName: 'scan.pdf', reason: 'corrupt' }])
   })
+
+  it('單一檔案讀取失敗時，同批的好檔仍然載入', async () => {
+    const broken = new File([new Uint8Array(10)], 'broken.pdf', { type: 'application/pdf' })
+    Object.defineProperty(broken, 'arrayBuffer', {
+      value: () => Promise.reject(new DOMException('讀取失敗', 'NotReadableError')),
+    })
+    const action = await loadIncomingFiles([pdfFile('good.pdf'), broken], initialDocumentState)
+    expect(action.pages).toHaveLength(3)
+    expect(action.errors).toEqual([{ fileName: 'broken.pdf', reason: 'corrupt' }])
+  })
 })
