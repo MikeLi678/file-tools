@@ -24,9 +24,11 @@ type Props = {
   loadedFiles: Record<string, LoadedPdf>
   thumbnailer: Thumbnailer
   onMove: (from: number, to: number) => void
+  onRotate: (pageId: string) => void
+  onRemove: (pageId: string) => void
 }
 
-export function PageGrid({ pages, loadedFiles, thumbnailer, onMove }: Props) {
+export function PageGrid({ pages, loadedFiles, thumbnailer, onMove, onRotate, onRemove }: Props) {
   const sensors = useSensors(
     // 觸控需要延遲門檻，否則單指點擊會被判定成拖曳，
     // 縮圖上的旋轉與刪除按鈕就按不到了。
@@ -60,6 +62,8 @@ export function PageGrid({ pages, loadedFiles, thumbnailer, onMove }: Props) {
               index={index}
               loadedFiles={loadedFiles}
               thumbnailer={thumbnailer}
+              onRotate={onRotate}
+              onRemove={onRemove}
             />
           ))}
         </div>
@@ -73,9 +77,11 @@ type TileProps = {
   index: number
   loadedFiles: Record<string, LoadedPdf>
   thumbnailer: Thumbnailer
+  onRotate: (pageId: string) => void
+  onRemove: (pageId: string) => void
 }
 
-function SortablePageTile({ page, index, loadedFiles, thumbnailer }: TileProps) {
+function SortablePageTile({ page, index, loadedFiles, thumbnailer, onRotate, onRemove }: TileProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
 
   return (
@@ -84,6 +90,8 @@ function SortablePageTile({ page, index, loadedFiles, thumbnailer }: TileProps) 
       index={index}
       loadedFiles={loadedFiles}
       thumbnailer={thumbnailer}
+      onRotate={onRotate}
+      onRemove={onRemove}
       dragging={isDragging}
       containerRef={setNodeRef}
       containerProps={{

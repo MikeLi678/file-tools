@@ -60,6 +60,8 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera }:
           loadedFiles={state.loadedFiles}
           thumbnailer={thumbnailer}
           onMove={(from, to) => dispatch({ type: 'move', from, to })}
+          onRotate={pageId => dispatch({ type: 'rotate', pageId })}
+          onRemove={pageId => dispatch({ type: 'remove', pageId })}
         />
       )}
     </>

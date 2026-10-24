@@ -171,3 +171,24 @@ body {
 }
 
 .page-grid { touch-action: pan-y pinch-zoom; }
+
+.tile-actions {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+
+.tile-button {
+  flex: 1;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 8px 2px;
+  min-height: 44px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.tile-button:last-child { border-right: none; }
+.tile-button.danger { color: var(--danger); }
