@@ -116,3 +116,50 @@ test('兩張以上時沒有 JPEG 選項，匯出成 PDF', async ({ page }) => {
   await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
   expect((await download).suggestedFilename()).toMatch(/\.pdf$/)
 })
+
+test('對原本就有旋轉的頁面再旋轉，角度是疊加不是覆寫', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('rotated-90.pdf')])
+  await expect(page.getByTestId('page-tile')).toHaveCount(1)
+
+  // rotated-90.pdf 的唯一一頁原本就是 90 度，再轉 90 應該得到 180
+  await page.getByTestId('page-tile').first().getByTestId('rotate').click()
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: '匯出 PDF' }).click()
+  await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
+
+  const doc = await PDFDocument.load(new Uint8Array(readFileSync((await (await download).path())!)))
+  expect(doc.getPage(0).getRotation().angle).toBe(180)
+})
+
+test('拖曳重新排序後，匯出的頁序跟著改變', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await expect(page.getByTestId('page-tile')).toHaveCount(3)
+  await expect(page.locator('.page-thumb img')).toHaveCount(3)
+
+  // three-pages.pdf 的第 2 頁是橫向，拖到最前面後匯出的第 1 頁就該是橫向
+  const tiles = page.getByTestId('page-tile')
+  const from = (await tiles.nth(1).boundingBox())!
+  const to = (await tiles.nth(0).boundingBox())!
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  // 先超過 MouseSensor 的 6px 門檻，再移到目標
+  await page.mouse.move(from.x + from.width / 2 - 20, from.y + from.height / 2, { steps: 5 })
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 15 })
+  await page.mouse.up()
+  await page.waitForTimeout(300)
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: '匯出 PDF' }).click()
+  await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
+
+  const doc = await PDFDocument.load(new Uint8Array(readFileSync((await (await download).path())!)))
+  const isLandscape = (index: number) => doc.getPage(index).getWidth() > doc.getPage(index).getHeight()
+  expect(isLandscape(0)).toBe(true)
+  expect(isLandscape(1)).toBe(false)
+  expect(isLandscape(2)).toBe(false)
+})

@@ -8,7 +8,11 @@
 npm install
 python3 scripts/make_fixtures.py     # 產生測試素材與 PWA icon
 npm run dev                          # http://localhost:5173/file-tools/
+npm run build                        # 正式建置（含 service worker 預快取）
+npm run preview                      # 預覽建置結果
 ```
+
+`scripts/make_fixtures.py` 需要 Python 的 `pypdf` 與 `Pillow`（`pip install pypdf Pillow`）。
 
 相機需要安全來源。`localhost` 算安全來源，所以本機開發可以測；用 IP 連手機測相機時必須走 HTTPS。
 
@@ -18,6 +22,13 @@ npm run dev                          # http://localhost:5173/file-tools/
 npm test                             # Vitest，純函式層
 npm run e2e                          # Playwright，瀏覽器流程
 npx tsc -b                           # 型別檢查（用 -b，不要用 --noEmit）
+```
+
+E2E 的前置條件（全新環境必做）：
+
+```bash
+npx playwright install chromium      # 沒裝瀏覽器，npm run e2e 會直接失敗
+python3 scripts/make_fixtures.py     # tests/fixtures/ 被 .gitignore 排除，跑 e2e 前必須先產生
 ```
 
 ## 架構
@@ -53,6 +64,13 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - [ ] 從相簿選取 HEIC 照片能正常轉成 PDF
 - [ ] 掃描時相機是後鏡頭
 - [ ] 掃描三頁再加一份既有 PDF 合併，一趟流程完成，不需要匯出中間檔
+- [ ] VoiceOver 能單獨聚焦縮圖上的「旋轉」與「刪除」按鈕（根 div 帶著 dnd-kit 的 `role="button"`，裡面放真 button 是巢狀互動元素，螢幕閱讀器的行為只能真機驗）
+- [ ] 長按拖曳排序在觸控下正常，且不與頁面捲動衝突（自動化只測得到滑鼠拖曳）
+- [ ] `navigator.share` 不可用時，`a[download]` 的退路在 standalone 模式下會不會變成在 app 內開啟預覽而無法返回
+- [ ] 大檔下載時，iOS 的確認框若停留超過 60 秒，blob URL 是否已失效
+- [ ] 離線狀態下縮圖正常顯示（不是「縮圖失敗」）
+- [ ] 部署新版後，關閉所有分頁再重開確實拿到新版
+- [ ] 單張照片匯出 JPEG 在 iOS 分享選單裡的行為；以及相機權限被拒後的畫面與引導
 
 ## 部署
 
