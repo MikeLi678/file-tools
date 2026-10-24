@@ -164,3 +164,10 @@ body {
 
 .error-banner ul { margin: 0 0 8px; padding-left: 18px; }
 .error-banner li { margin-bottom: 4px; }
+
+.page-tile.dragging {
+  opacity: 0.4;
+  z-index: 2;
+}
+
+.page-grid { touch-action: pan-y; }

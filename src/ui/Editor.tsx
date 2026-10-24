@@ -55,7 +55,12 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera }:
       {state.pages.length === 0 ? (
         <p className="empty-state">還沒有頁面。用上方的按鈕加入 PDF、照片或掃描。</p>
       ) : (
-        <PageGrid pages={state.pages} loadedFiles={state.loadedFiles} thumbnailer={thumbnailer} />
+        <PageGrid
+          pages={state.pages}
+          loadedFiles={state.loadedFiles}
+          thumbnailer={thumbnailer}
+          onMove={(from, to) => dispatch({ type: 'move', from, to })}
+        />
       )}
     </>
   )
