@@ -145,7 +145,10 @@ body {
 .page-number {
   position: absolute;
   left: 4px;
-  bottom: 4px;
+  /* 移到左上角。底部現在是 .tile-actions 的按鈕列，徽章放在那裡會壓住「旋轉」按鈕 */
+  top: 4px;
+  /* 保險：即使位置再變動，徽章也不該攔截底下控制項的點擊 */
+  pointer-events: none;
   background: rgba(24, 24, 27, 0.72);
   color: #fff;
   font-size: 11px;

@@ -2,6 +2,7 @@ import {
   useEffect,
   useState,
   type HTMLAttributes,
+  type KeyboardEvent,
   type MouseEvent,
   type Ref,
   type TouchEvent,
@@ -52,12 +53,13 @@ export function PageTile({
   }, [page, page.rotation, loadedFiles, thumbnailer])
 
   // 按鈕上的按下事件不能冒泡到 dnd-kit 的 sensor，否則按下按鈕的瞬間會被當成開始拖曳。
-  // 必須同時擋 mousedown 與 touchstart：sensors 是 MouseSensor（聽 mousedown）
-  // 與 TouchSensor（聽 touchstart），擋 pointerdown 對這兩者都無效，
-  // 因為 pointer 事件與 mouse／touch 事件是各自獨立的事件物件。
+  // 三種都要擋，因為三個 sensor 各自監聽不同的事件：
+  //   MouseSensor 聽 mousedown、TouchSensor 聽 touchstart、KeyboardSensor 聽 keydown。
+  // 擋 pointerdown 對它們都無效，pointer 事件與 mouse／touch 事件是各自獨立的物件。
   const stopDrag = {
     onMouseDown: (event: MouseEvent<HTMLButtonElement>) => event.stopPropagation(),
     onTouchStart: (event: TouchEvent<HTMLButtonElement>) => event.stopPropagation(),
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => event.stopPropagation(),
   }
 
   return (
@@ -73,7 +75,7 @@ export function PageTile({
         {!url && !failed && <span className="thumb-placeholder">載入中</span>}
         {failed && <span className="thumb-placeholder">縮圖失敗</span>}
       </div>
-      <span className="page-number">{index + 1}</span>
+      <span className="page-number" aria-hidden="true">{index + 1}</span>
       <div className="tile-actions">
         <button
           className="tile-button"
