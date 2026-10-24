@@ -251,3 +251,16 @@ body {
 }
 
 .page-tile.selected .select-mark { color: var(--accent); }
+
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.result-name { font-size: 15px; margin: 0 0 4px; word-break: break-all; }
+.result-meta { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+
+.jpeg-button { display: block; width: 100%; text-align: center; margin-top: 8px; }

@@ -6,7 +6,6 @@ type Props = {
   onInvert: () => void
   onExport: () => void
   exporting: boolean
-  /** Task 13 才會傳真值，這裡先接住 */
   jpegAvailable: boolean
   onExportJpeg: () => void
 }
@@ -19,7 +18,8 @@ export function ActionBar({
   onInvert,
   onExport,
   exporting,
-  // jpegAvailable、onExportJpeg 留在 Props，Task 13 才會解構使用
+  jpegAvailable,
+  onExportJpeg,
 }: Props) {
   const canExport = !exporting && (selectMode ? selectedCount > 0 : totalPages > 0)
 
@@ -44,6 +44,11 @@ export function ActionBar({
       <button className="primary-button" disabled={!canExport} onClick={onExport}>
         {exportLabel}
       </button>
+      {jpegAvailable && (
+        <button className="text-button jpeg-button" disabled={exporting} onClick={onExportJpeg}>
+          改成匯出 JPEG
+        </button>
+      )}
       {selectMode && (
         <p className="action-hint">
           分割的做法：先匯出勾選的頁，回來按「反轉勾選」再匯出一次，就得到兩份。

@@ -1,11 +1,16 @@
 import { useMemo, useReducer, useState } from 'react'
 import { Home } from './ui/Home'
 import { Editor } from './ui/Editor'
+import { ExportResult } from './ui/ExportResult'
 import { documentReducer, initialDocumentState } from './state/documentReducer'
 import { createThumbnailer } from './core/thumbnailer'
 import { findTool, type ToolId } from './tools'
+import type { ExportedFile } from './core/output'
 
-type View = { name: 'home' } | { name: 'editor'; tool: ToolId }
+type View =
+  | { name: 'home' }
+  | { name: 'editor'; tool: ToolId }
+  | { name: 'result'; tool: ToolId; file: ExportedFile }
 
 export function App() {
   const [view, setView] = useState<View>({ name: 'home' })
@@ -29,20 +34,37 @@ export function App() {
     setView({ name: 'home' })
   }
 
+  if (view.name === 'home') {
+    return (
+      <div className="app">
+        <Home onPick={openTool} />
+      </div>
+    )
+  }
+
+  if (view.name === 'result') {
+    return (
+      <div className="app">
+        <ExportResult
+          file={view.file}
+          onBackToEditor={() => setView({ name: 'editor', tool: view.tool })}
+          onHome={goHome}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="app">
-      {view.name === 'home' ? (
-        <Home onPick={openTool} />
-      ) : (
-        <Editor
-          tool={findTool(view.tool)}
-          state={state}
-          dispatch={dispatch}
-          thumbnailer={thumbnailer}
-          onBack={goHome}
-          onCamera={() => window.alert('相機在後續的 task 實作')}
-        />
-      )}
+      <Editor
+        tool={findTool(view.tool)}
+        state={state}
+        dispatch={dispatch}
+        thumbnailer={thumbnailer}
+        onBack={goHome}
+        onCamera={() => window.alert('相機在後續的 task 實作')}
+        onExported={file => setView({ name: 'result', tool: view.tool, file })}
+      />
     </div>
   )
 }
