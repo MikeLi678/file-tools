@@ -8,6 +8,7 @@ export const LIMITS = {
   thumbnailMaxScale: 2,
   thumbnailConcurrency: 3,
   jpegQuality: 0.85,
+  maxCaptureEdge: 2400,
 } as const
 
 export type IncomingFile = {

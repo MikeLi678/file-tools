@@ -2,6 +2,8 @@ import { useMemo, useReducer, useState } from 'react'
 import { Home } from './ui/Home'
 import { Editor } from './ui/Editor'
 import { ExportResult } from './ui/ExportResult'
+import { ScannerView } from './ui/ScannerView'
+import { newId } from './ids'
 import { documentReducer, initialDocumentState } from './state/documentReducer'
 import { createThumbnailer } from './core/thumbnailer'
 import { findTool, type ToolId } from './tools'
@@ -11,6 +13,7 @@ type View =
   | { name: 'home' }
   | { name: 'editor'; tool: ToolId }
   | { name: 'result'; tool: ToolId; file: ExportedFile }
+  | { name: 'scanner'; tool: ToolId }
 
 export function App() {
   const [view, setView] = useState<View>({ name: 'home' })
@@ -26,7 +29,7 @@ export function App() {
   const openTool = (id: ToolId) => {
     resetDocument()
     dispatch({ type: 'setSelectMode', on: findTool(id).initialSelectMode })
-    setView({ name: 'editor', tool: id })
+    setView(id === 'scan' ? { name: 'scanner', tool: id } : { name: 'editor', tool: id })
   }
 
   const goHome = () => {
@@ -54,6 +57,25 @@ export function App() {
     )
   }
 
+  if (view.name === 'scanner') {
+    return (
+      <div className="app">
+        <ScannerView
+          onCaptured={blob => {
+            dispatch({
+              type: 'load',
+              pages: [{ id: newId(), source: { kind: 'image', blob }, rotation: 0, selected: false }],
+              files: [],
+              errors: [],
+            })
+            setView({ name: 'editor', tool: view.tool })
+          }}
+          onCancel={() => setView({ name: 'editor', tool: view.tool })}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <Editor
@@ -62,7 +84,7 @@ export function App() {
         dispatch={dispatch}
         thumbnailer={thumbnailer}
         onBack={goHome}
-        onCamera={() => window.alert('相機在後續的 task 實作')}
+        onCamera={() => setView({ name: 'scanner', tool: view.tool })}
         onExported={file => setView({ name: 'result', tool: view.tool, file })}
       />
     </div>

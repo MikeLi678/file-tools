@@ -264,3 +264,32 @@ body {
 .result-meta { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
 
 .jpeg-button { display: block; width: 100%; text-align: center; margin-top: 8px; }
+
+.camera-stage,
+.crop-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 12px 0;
+  min-height: 320px;
+}
+
+.camera-stage video { width: 100%; height: 100%; object-fit: contain; }
+
+.crop-overlay { width: 100%; height: 100%; touch-action: none; }
+
+.crop-polygon {
+  fill: rgba(37, 99, 235, 0.18);
+  stroke: #60a5fa;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.crop-handle { fill: #fff; stroke: #2563eb; stroke-width: 3; vector-effect: non-scaling-stroke; }
+
+.filter-row { display: flex; gap: 8px; }
+.source-button.active { border-color: var(--accent); color: var(--accent); }
