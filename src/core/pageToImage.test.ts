@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { fitToEdge } from './pageToImage'
+import { fitToEdge, pagesToJpegBlobs } from './pageToImage'
+import type { Page } from '../types'
 
 describe('fitToEdge', () => {
   it('橫向影像以寬為長邊', () => {
@@ -27,5 +28,32 @@ describe('fitToEdge', () => {
 
   it('至少 1 像素，不會回傳 0', () => {
     expect(fitToEdge(10000, 1, 100)).toEqual({ width: 100, height: 1 })
+  })
+
+  it('極端直向時 width 也不會變成 0', () => {
+    // 既有的極端案例只壓到 height，width 的下限保護沒有被測到
+    expect(fitToEdge(1, 10000, 100)).toEqual({ width: 1, height: 100 })
+  })
+
+  it('是四捨五入而不是無條件捨去', () => {
+    // 610/842 放大到長邊 2000 時，寬是 1448.9——round 得 1449、floor 得 1448。
+    // 只斷言 Number.isInteger 的話這兩者分不出來
+    expect(fitToEdge(610, 842, 2000)).toEqual({ width: 1449, height: 2000 })
+  })
+})
+
+describe('pagesToJpegBlobs 的錯誤路徑', () => {
+  it('頁面清單為空時丟出明確錯誤', async () => {
+    await expect(pagesToJpegBlobs({ pages: [], loadedFiles: {} })).rejects.toThrow('沒有可轉換的頁面')
+  })
+
+  it('引用了不存在的來源檔案時丟出明確錯誤', async () => {
+    const page: Page = {
+      id: 'p1',
+      source: { kind: 'pdf', fileId: 'missing', pageIndex: 0 },
+      rotation: 0,
+      selected: false,
+    }
+    await expect(pagesToJpegBlobs({ pages: [page], loadedFiles: {} })).rejects.toThrow('找不到來源檔案')
   })
 })

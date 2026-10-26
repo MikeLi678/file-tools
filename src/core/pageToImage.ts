@@ -96,14 +96,15 @@ async function renderPdfPage(
   const canvas = document.createElement('canvas')
   canvas.width = Math.ceil(viewport.width)
   canvas.height = Math.ceil(viewport.height)
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('無法取得 canvas context')
-
-  // PDF 頁面是透明的，不填白底的話 JPEG 會變成黑色
-  context.fillStyle = '#ffffff'
-  context.fillRect(0, 0, canvas.width, canvas.height)
 
   try {
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('無法取得 canvas context')
+
+    // PDF 頁面是透明的，不填白底的話 JPEG 會變成黑色
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+
     await pdfPage.render({ canvasContext: context, viewport }).promise
     const blob = await new Promise<Blob | null>(resolve =>
       canvas.toBlob(resolve, 'image/jpeg', LIMITS.jpegQuality),
