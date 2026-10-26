@@ -35,8 +35,12 @@ export function sanitizeFileName(input: string, fallback: string): string {
   const cleaned = input
     // eslint-disable-next-line no-control-regex
     .replace(/[/\\:*?"<>|\u0000-\u001f]/g, '')
-    .trim()
     .slice(0, MAX_FILE_NAME_LENGTH)
+    // 前後的點號與空白要在截斷「之後」再清一次：
+    // 開頭的點號會變成隱藏檔（而這個功能存在的理由就是讓檔案找得到），
+    // 結尾的點號與空白在 Windows 上會被靜默吃掉，
+    // 而截斷本身也可能讓結尾剛好落在空白或點號上。
+    .replace(/^[.\s]+|[.\s]+$/g, '')
   return cleaned.length > 0 ? cleaned : fallback
 }
 

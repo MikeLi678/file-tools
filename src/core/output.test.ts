@@ -56,4 +56,28 @@ describe('sanitizeFileName', () => {
     const long = 'あ'.repeat(200)
     expect(sanitizeFileName(long, 'fallback')).toHaveLength(80)
   })
+
+  it('開頭的點號會被清掉，不產生隱藏檔', () => {
+    expect(sanitizeFileName('.報告', 'fallback')).toBe('報告')
+    expect(sanitizeFileName('...報告', 'fallback')).toBe('報告')
+  })
+
+  it('結尾的點號會被清掉（Windows 會把它吃掉）', () => {
+    expect(sanitizeFileName('報告...', 'fallback')).toBe('報告')
+  })
+
+  it('只有點號時退回預設', () => {
+    expect(sanitizeFileName('.', 'fallback')).toBe('fallback')
+    expect(sanitizeFileName('..', 'fallback')).toBe('fallback')
+  })
+
+  it('截斷後結尾若是空白也會被清掉', () => {
+    // 79 個字加一個空白，截斷在第 80 個字元（空白）上
+    const input = 'あ'.repeat(79) + ' ' + 'い'.repeat(50)
+    expect(sanitizeFileName(input, 'fallback')).toBe('あ'.repeat(79))
+  })
+
+  it('中間的點號保留（副檔名以外的點是合法的）', () => {
+    expect(sanitizeFileName('2026.10.26 報告', 'fallback')).toBe('2026.10.26 報告')
+  })
 })
