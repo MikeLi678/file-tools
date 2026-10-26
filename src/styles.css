@@ -398,3 +398,71 @@ body {
   max-width: 100%;
   max-height: 60px;
 }
+
+.signature-placer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 24px;
+}
+
+/* 舞台的長寬比是「顯示後」的，頁面本身是「未旋轉」的，兩者在 90/270 時互換 */
+.placer-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: var(--bg);
+}
+
+.placer-page {
+  position: relative;
+  width: 100%;
+  max-height: 100%;
+  background: #ffffff;
+  touch-action: none;
+}
+
+.placer-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.placer-overlay {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.placer-overlay img {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.placer-overlay.active {
+  outline: 2px dashed var(--accent);
+}
+
+/* 控制點本身小，但命中區要有 44pt */
+.placer-handle {
+  position: absolute;
+  right: -11px;
+  bottom: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #ffffff;
+}
+
+.placer-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
