@@ -143,6 +143,46 @@ describe('勾選', () => {
   })
 })
 
+describe('removeSelected', () => {
+  it('刪掉所有勾選的頁，未勾選的不動', () => {
+    let state = stateWithThreePages()
+    state = documentReducer(state, { type: 'toggleSelect', pageId: 'p1' })
+    state = documentReducer(state, { type: 'toggleSelect', pageId: 'p3' })
+    state = documentReducer(state, { type: 'removeSelected' })
+    expect(state.pages.map(p => p.id)).toEqual(['p2'])
+  })
+
+  it('沒有任何勾選時不動', () => {
+    const before = stateWithThreePages()
+    const after = documentReducer(before, { type: 'removeSelected' })
+    expect(after.pages.map(p => p.id)).toEqual(['p1', 'p2', 'p3'])
+  })
+
+  it('刪完某份 PDF 的所有頁時回收它的位元組', () => {
+    let state = stateWithThreePages()
+    // p1 與 p2 都屬於 a.pdf
+    state = documentReducer(state, { type: 'toggleSelect', pageId: 'p1' })
+    state = documentReducer(state, { type: 'toggleSelect', pageId: 'p2' })
+    state = documentReducer(state, { type: 'removeSelected' })
+    expect(Object.keys(state.loadedFiles)).toEqual(['b'])
+  })
+
+  it('不改變勾選模式本身', () => {
+    let state = documentReducer(stateWithThreePages(), { type: 'setSelectMode', on: true })
+    state = documentReducer(state, { type: 'toggleSelect', pageId: 'p1' })
+    state = documentReducer(state, { type: 'removeSelected' })
+    expect(state.selectMode).toBe(true)
+  })
+
+  it('全部勾選後刪除會清空 loadedFiles', () => {
+    let state = stateWithThreePages()
+    state = documentReducer(state, { type: 'invertSelection' })
+    state = documentReducer(state, { type: 'removeSelected' })
+    expect(state.pages).toEqual([])
+    expect(state.loadedFiles).toEqual({})
+  })
+})
+
 describe('totalLoadedBytes', () => {
   it('累加所有已載入 PDF 的位元組', () => {
     const state = documentReducer(initialDocumentState, {

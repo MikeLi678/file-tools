@@ -113,6 +113,7 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
           selectedCount={state.pages.filter(p => p.selected).length}
           onToggleMode={on => dispatch({ type: 'setSelectMode', on })}
           onInvert={() => dispatch({ type: 'invertSelection' })}
+          onRemoveSelected={() => dispatch({ type: 'removeSelected' })}
           onExport={() => handleExport('pdf')}
           exporting={exporting}
           jpegAvailable={jpegAvailable}

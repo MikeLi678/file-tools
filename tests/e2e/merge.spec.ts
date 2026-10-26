@@ -176,3 +176,26 @@ test('來源頁本身有旋轉時，縮圖方向與匯出一致', async ({ page 
   )
   expect(landscape).toBe(true)
 })
+
+test('勾選後可以一次刪除多頁', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await expect(page.getByTestId('page-tile')).toHaveCount(3)
+
+  await page.getByRole('button', { name: '勾選抽頁' }).click()
+  await page.getByTestId('page-tile').nth(0).click()
+  await page.getByTestId('page-tile').nth(2).click()
+
+  await page.getByRole('button', { name: '刪除勾選的 2 頁' }).click()
+  await expect(page.getByTestId('page-tile')).toHaveCount(1)
+  await expect(page.locator('.page-number')).toHaveText(['1'])
+})
+
+test('沒有勾選任何頁時不顯示刪除按鈕', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await page.getByRole('button', { name: '勾選抽頁' }).click()
+  await expect(page.getByRole('button', { name: /刪除勾選的/ })).toHaveCount(0)
+})

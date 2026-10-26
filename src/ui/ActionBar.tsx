@@ -4,6 +4,7 @@ type Props = {
   selectedCount: number
   onToggleMode: (on: boolean) => void
   onInvert: () => void
+  onRemoveSelected: () => void
   onExport: () => void
   exporting: boolean
   jpegAvailable: boolean
@@ -16,6 +17,7 @@ export function ActionBar({
   selectedCount,
   onToggleMode,
   onInvert,
+  onRemoveSelected,
   onExport,
   exporting,
   jpegAvailable,
@@ -38,6 +40,11 @@ export function ActionBar({
         {selectMode && (
           <button className="text-button" onClick={onInvert}>
             反轉勾選
+          </button>
+        )}
+        {selectMode && selectedCount > 0 && (
+          <button className="text-button danger" onClick={onRemoveSelected}>
+            刪除勾選的 {selectedCount} 頁
           </button>
         )}
       </div>

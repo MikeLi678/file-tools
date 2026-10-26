@@ -296,3 +296,4 @@ body {
 
 .filter-row { display: flex; gap: 8px; }
 .source-button.active { border-color: var(--accent); color: var(--accent); }
+.text-button.danger { color: var(--danger); }

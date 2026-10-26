@@ -3,6 +3,7 @@ import type { DocumentState, LoadError, LoadedPdf, Page, Rotation } from '../typ
 export type DocumentAction =
   | { type: 'load'; pages: Page[]; files: LoadedPdf[]; errors: LoadError[] }
   | { type: 'remove'; pageId: string }
+  | { type: 'removeSelected' }
   | { type: 'move'; from: number; to: number }
   | { type: 'rotate'; pageId: string }
   | { type: 'toggleSelect'; pageId: string }
@@ -62,6 +63,12 @@ export function documentReducer(state: DocumentState, action: DocumentAction): D
 
     case 'remove': {
       const pages = state.pages.filter(p => p.id !== action.pageId)
+      return { ...state, pages, loadedFiles: collectGarbage(pages, state.loadedFiles) }
+    }
+
+    case 'removeSelected': {
+      const pages = state.pages.filter(p => !p.selected)
+      // 與單頁刪除一樣要回收沒有頁面引用的 PDF，否則批次刪除反而更容易洩漏
       return { ...state, pages, loadedFiles: collectGarbage(pages, state.loadedFiles) }
     }
 
