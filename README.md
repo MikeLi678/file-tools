@@ -2,6 +2,12 @@
 
 手機瀏覽器用的 PWA。合併 PDF、圖片轉 PDF、相機掃描、分割抽頁，全部在裝置本機完成，檔案不會上傳到任何伺服器。
 
+v1.1 新增：
+
+- PDF 轉圖片：挑出頁面轉成 JPEG，可一次分享多張
+- 批次刪除：勾選多頁後一次刪掉
+- 自訂檔名：匯出前可以改檔名
+
 ## 開發
 
 ```bash
@@ -21,7 +27,7 @@ npm run preview                      # 預覽建置結果
 ```bash
 npm test                             # Vitest，純函式層
 npm run e2e                          # Playwright，瀏覽器流程
-npx tsc -b                           # 型別檢查（用 -b，不要用 --noEmit）
+npx tsc -b                           # 型別檢查（務必用 -b，本專案的 tsconfig 是 references 結構）
 ```
 
 型別檢查用 `npx tsc -b`，本專案不使用 linter。
@@ -35,12 +41,14 @@ python3 scripts/make_fixtures.py     # tests/fixtures/ 被 .gitignore 排除，�
 
 ## 架構
 
-所有來源正規化成單一 `Page[]` 清單，四個功能是同一條資料路徑上的不同入口與匯出選項。
+所有來源正規化成單一 `Page[]` 清單，各功能是同一條資料路徑上的不同入口與匯出選項。
 
 - `src/state/documentReducer.ts` — `Page[]` 的唯一變更入口，純函式
 - `src/core/exporter.ts` — 唯一寫 PDF 的地方
 - `src/core/scanner/geometry.ts` — 透視校正，純函式
 - `src/core/scanner/filters.ts` — 影像增強，純函式
+- `src/core/pdfjs.ts` — pdf.js 的 worker 只能設定一次，這裡集中設定；是 thumbnailer 與 pageToImage 唯一真正共用的東西
+- `src/core/pageToImage.ts` — PDF 頁面轉 JPEG，序列渲染、逐頁釋放 canvas
 - `src/core/thumbnailer.ts`、`src/core/scanner/camera.ts`、`src/core/output.ts` — 瀏覽器專屬的轉接層
 
 純函式層不依賴任何瀏覽器 API，所以 PDF 正確性這件最重要的事能在 Node 下完整測試。
@@ -55,6 +63,8 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - 檔案庫與歷史紀錄。匯出即結束，不留存
 - 自動邊緣偵測。裁切框要手動對齊四個角
 - OCR
+- 多頁圖片打包成 ZIP。分割本來就刻意不引入 ZIP 概念，手機上 ZIP 也不好解
+- PNG 輸出。照片類影像存成 PNG 體積會大到不可用，圖片一律輸出 JPEG
 
 ## 真機手動測試清單
 
@@ -73,6 +83,10 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - [ ] 離線狀態下縮圖正常顯示（不是「縮圖失敗」）
 - [ ] 部署新版後，關閉所有分頁再重開確實拿到新版
 - [ ] 單張照片匯出 JPEG 在 iOS 分享選單裡的行為；以及相機權限被拒後的畫面與引導
+- [ ] 一次分享多張圖片時，iOS 的分享選單能不能一次全部存進相簿
+- [ ] **20 頁的多檔分享 iOS 撐不撐得住**（`LIMITS.maxImageExportPages` 這個數字是估計值，依實測調整）
+- [ ] 2000px 的 JPEG 在 iPhone 上渲染 20 頁的實際耗時與記憶體峰值
+- [ ] 自訂檔名含中文時，存進「檔案」App 後顯示是否正確
 
 ## 部署
 

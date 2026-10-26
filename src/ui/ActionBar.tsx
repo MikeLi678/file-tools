@@ -77,7 +77,7 @@ export function ActionBar({
           改成匯出 JPEG
         </button>
       )}
-      {selectMode && (
+      {selectMode && primaryExport === 'pdf' && (
         <p className="action-hint">
           分割的做法：先匯出勾選的頁，回來按「反轉勾選」再匯出一次，就得到兩份。
         </p>
