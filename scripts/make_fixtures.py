@@ -30,6 +30,15 @@ page = w.add_blank_page(A4[0], A4[1])
 page.rotate(90)
 write(w, "rotated-90.pdf")
 
+# 單頁，MediaBox 原點不在 (0,0)：[20 30 615 872]，即 x=20、y=30、寬 595、高 842。
+# 用來驗證簽名座標有加上 MediaBox 原點偏移
+from pypdf.generic import RectangleObject
+w = PdfWriter()
+page = w.add_blank_page(595, 842)
+page.mediabox = RectangleObject([20, 30, 615, 872])
+page.cropbox = RectangleObject([20, 30, 615, 872])
+write(w, "offset-mediabox.pdf")
+
 # 零頁
 w = PdfWriter()
 write(w, "empty.pdf")
