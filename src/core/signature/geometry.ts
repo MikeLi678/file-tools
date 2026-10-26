@@ -56,6 +56,8 @@ export function toUnrotatedSpace(point: NormalizedPoint, rotation: Rotation): No
  * 不需要處理旋轉：pdf-lib 的使用者空間不受 /Rotate 影響，而覆蓋層存的就是
  * 未旋轉座標，兩者是同一個空間。/Rotate 會讓頁面連同簽名一起旋轉顯示。
  *
+ * signatureAspect 是簽名的 pt 高 / 寬（簽名自己的長寬比，不是頁面的）。
+ *
  * box 對 PDF 頁是 MediaBox（原點可能不在 (0,0)），對影像頁是 fitOnA4 的 placement。
  */
 export function normalizedToPdfRect(
@@ -74,12 +76,33 @@ export function normalizedToPdfRect(
   }
 }
 
-/** 把覆蓋層夾限在頁面範圍內，並限制寬度 */
-export function clampOverlayBox(overlay: OverlayBox, signatureAspect: number): OverlayBox {
+/**
+ * 覆蓋層的正規化高度（佔頁高的比例）。pageAspect 是「頁高 / 頁寬」。
+ *
+ * 不能直接寫 width * signatureAspect：width 是「佔頁寬」的比例，而
+ * signatureAspect 是簽名自己的 pt 高/寬，兩者分母不同。實際高度是
+ * width * pageWidth * signatureAspect，再除以 pageHeight 才是這裡的結果。
+ * 只有正方形頁（pageAspect 為 1）時兩種寫法才相等——實測 A4 橫向用錯會讓
+ * 簽名溢出頁底 8.3%，直向則永遠碰不到底部。
+ */
+export function overlayHeight(width: number, signatureAspect: number, pageAspect: number): number {
+  return (width * signatureAspect) / pageAspect
+}
+
+/** 把覆蓋層夾限在頁面範圍內，並限制寬度。pageAspect 是「頁高 / 頁寬」 */
+export function clampOverlayBox(
+  overlay: OverlayBox,
+  signatureAspect: number,
+  pageAspect: number,
+): OverlayBox {
   let width = Math.min(MAX_OVERLAY_WIDTH, Math.max(MIN_OVERLAY_WIDTH, overlay.width))
-  // 細長的簽名在寬度合法時仍可能高過整頁，此時以高度為準回推寬度
-  if (width * signatureAspect > 1) width = 1 / signatureAspect
-  const height = width * signatureAspect
+  // 寬度合法時高度仍可能超過整頁（細長的簽名），此時以高度為準回推寬度。
+  // 這會讓寬度可能低於 MIN_OVERLAY_WIDTH——放得進頁面優先於寬度下限，
+  // 否則簽名會直接溢出頁面，那是使用者看得到的錯誤。
+  if (overlayHeight(width, signatureAspect, pageAspect) > 1) {
+    width = pageAspect / signatureAspect
+  }
+  const height = overlayHeight(width, signatureAspect, pageAspect)
   return {
     x: Math.min(Math.max(0, overlay.x), Math.max(0, 1 - width)),
     y: Math.min(Math.max(0, overlay.y), Math.max(0, 1 - height)),
