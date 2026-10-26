@@ -214,6 +214,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 8px;
   min-height: 24px;
 }
@@ -297,3 +299,14 @@ body {
 .filter-row { display: flex; gap: 8px; }
 .source-button.active { border-color: var(--accent); color: var(--accent); }
 .text-button.danger { color: var(--danger); }
+
+/* 破壞性動作：與主按鈕隔開、置中、全寬，避免誤觸。
+   上方的 margin 加上 .action-hint 的文字一起當視覺分隔——
+   實測原本刪除鈕與匯出鈕的垂直間距是 0px，而且兩者文案句型幾乎一樣。 */
+.remove-selected {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+}

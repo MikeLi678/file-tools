@@ -42,11 +42,6 @@ export function ActionBar({
             反轉勾選
           </button>
         )}
-        {selectMode && selectedCount > 0 && (
-          <button className="text-button danger" onClick={onRemoveSelected}>
-            刪除勾選的 {selectedCount} 頁
-          </button>
-        )}
       </div>
       <button className="primary-button" disabled={!canExport} onClick={onExport}>
         {exportLabel}
@@ -60,6 +55,11 @@ export function ActionBar({
         <p className="action-hint">
           分割的做法：先匯出勾選的頁，回來按「反轉勾選」再匯出一次，就得到兩份。
         </p>
+      )}
+      {selectMode && selectedCount > 0 && (
+        <button className="text-button danger remove-selected" onClick={onRemoveSelected}>
+          刪除勾選的 {selectedCount} 頁
+        </button>
       )}
     </div>
   )
