@@ -34,4 +34,11 @@ describe('isUsable', () => {
   it('blob.size 為 0 被擋掉', () => {
     expect(isUsable(make({ blob: new Blob([]) }))).toBe(false)
   })
+
+  // instanceof 的檢查是承重的：blob 若不是物件，後面的 .size 會丟 TypeError，
+  // 讓整個 list() 爆掉而不是靜默跳過這一筆。
+  it('blob 不是 Blob 時被擋掉且不會丟錯', () => {
+    expect(isUsable(make({ blob: undefined as unknown as Blob }))).toBe(false)
+    expect(isUsable(make({ blob: 'not a blob' as unknown as Blob }))).toBe(false)
+  })
 })
