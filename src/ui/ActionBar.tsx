@@ -1,3 +1,5 @@
+import type { ImageExportProgress } from '../core/pageToImage'
+
 type Props = {
   selectMode: boolean
   totalPages: number
@@ -6,7 +8,10 @@ type Props = {
   onInvert: () => void
   onRemoveSelected: () => void
   onExport: () => void
-  exporting: boolean
+  progress: ImageExportProgress | null
+  /** 主按鈕做什麼，由卡片決定。另一種以次要按鈕出現 */
+  primaryExport: 'pdf' | 'images'
+  onExportImages: () => void
   jpegAvailable: boolean
   onExportJpeg: () => void
 }
@@ -19,17 +24,27 @@ export function ActionBar({
   onInvert,
   onRemoveSelected,
   onExport,
-  exporting,
+  progress,
+  primaryExport,
+  onExportImages,
   jpegAvailable,
   onExportJpeg,
 }: Props) {
-  const canExport = !exporting && (selectMode ? selectedCount > 0 : totalPages > 0)
+  const busy = progress !== null
+  const canExport = !busy && (selectMode ? selectedCount > 0 : totalPages > 0)
+  // 轉圖片一定要先勾選——非勾選模式下「整份轉圖片」很容易一次轉出上百張
+  const imagesReady = !busy && selectMode && selectedCount > 0
 
-  const exportLabel = exporting
-    ? '處理中'
-    : selectMode
-      ? `匯出勾選的 ${selectedCount} 頁`
-      : '匯出 PDF'
+  const pdfLabel = selectMode ? `匯出勾選的 ${selectedCount} 頁` : '匯出 PDF'
+  const imagesLabel = `匯出勾選的 ${selectedCount} 頁為圖片`
+
+  const busyLabel =
+    progress && progress.total > 1 ? `處理中 ${progress.done}/${progress.total}` : '處理中'
+
+  const primaryIsImages = primaryExport === 'images'
+  const primaryLabel = busy ? busyLabel : primaryIsImages ? imagesLabel : pdfLabel
+  const primaryDisabled = primaryIsImages ? !imagesReady : !canExport
+  const onPrimary = primaryIsImages ? onExportImages : onExport
 
   return (
     <div className="action-bar">
@@ -43,11 +58,22 @@ export function ActionBar({
           </button>
         )}
       </div>
-      <button className="primary-button" disabled={!canExport} onClick={onExport}>
-        {exportLabel}
+      <button className="primary-button" disabled={primaryDisabled} onClick={onPrimary}>
+        {primaryLabel}
       </button>
+      {primaryIsImages ? (
+        <button className="text-button jpeg-button" disabled={!canExport} onClick={onExport}>
+          改成匯出 PDF
+        </button>
+      ) : (
+        imagesReady && (
+          <button className="text-button jpeg-button" disabled={busy} onClick={onExportImages}>
+            改成匯出勾選的 {selectedCount} 頁為圖片
+          </button>
+        )
+      )}
       {jpegAvailable && (
-        <button className="text-button jpeg-button" disabled={exporting} onClick={onExportJpeg}>
+        <button className="text-button jpeg-button" disabled={busy} onClick={onExportJpeg}>
           改成匯出 JPEG
         </button>
       )}

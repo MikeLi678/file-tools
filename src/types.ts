@@ -28,6 +28,7 @@ export type LoadErrorReason =
   | 'file-too-large'
   | 'limit-pages'
   | 'limit-total-bytes'
+  | 'limit-image-pages'
 
 export type LoadError = {
   fileName: string

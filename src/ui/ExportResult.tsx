@@ -1,27 +1,37 @@
 import { useState } from 'react'
-import { canShareFiles, formatBytes, sanitizeFileName, shareFile, type ExportedFile } from '../core/output'
+import { canShareFiles, formatBytes, sanitizeFileName, shareFiles, type ExportedFile } from '../core/output'
 
 type Props = {
-  file: ExportedFile
+  files: ExportedFile[]
   onBackToEditor: () => void
   onHome: () => void
 }
 
-export function ExportResult({ file, onBackToEditor, onHome }: Props) {
-  // file.fileName 形如 file-tools-20261026-1130.pdf，拆成基底與副檔名。
+export function ExportResult({ files, onBackToEditor, onHome }: Props) {
+  // 第一個檔名形如 file-tools-20261026-1130.pdf 或 ...-1130-1.jpg，拆成基底與副檔名。
   // 使用者只改基底，副檔名由程式決定。
-  const dotIndex = file.fileName.lastIndexOf('.')
-  const defaultBase = file.fileName.slice(0, dotIndex)
-  const extension = file.fileName.slice(dotIndex)
+  const first = files[0]
+  const dotIndex = first.fileName.lastIndexOf('.')
+  const rawBase = first.fileName.slice(0, dotIndex)
+  // 只有多檔時才有序號後綴要拿掉；單檔的 -1130 是時間戳的一部分，不能剝
+  const defaultBase = files.length > 1 ? rawBase.replace(/-\d+$/, '') : rawBase
+  const extension = first.fileName.slice(dotIndex)
   const [nameInput, setNameInput] = useState(defaultBase)
-  const finalName = sanitizeFileName(nameInput, defaultBase) + extension
+  const base = sanitizeFileName(nameInput, defaultBase)
 
+  // 單檔用基底名稱，多檔加序號
+  const named = files.map((file, index) => ({
+    ...file,
+    fileName: files.length === 1 ? base + extension : `${base}-${index + 1}${extension}`,
+  }))
+
+  const totalBytes = files.reduce((sum, file) => sum + file.blob.size, 0)
   const [done, setDone] = useState(false)
-  const shareable = canShareFiles({ ...file, fileName: finalName })
+  const shareable = canShareFiles(named)
 
-  // 不要 await 後才呼叫 shareFile——它內部需要同步進入 navigator.share
+  // 不要 await 後才呼叫 shareFiles——它內部需要同步進入 navigator.share
   const handleSave = () => {
-    shareFile({ ...file, fileName: finalName })
+    shareFiles(named)
       .then(result => {
         if (result !== 'cancelled') setDone(true)
       })
@@ -52,7 +62,9 @@ export function ExportResult({ file, onBackToEditor, onHome }: Props) {
           </span>
         </label>
         <p className="result-meta">
-          {file.pageCount} 頁 · {formatBytes(file.blob.size)}
+          {files.length === 1
+            ? `${first.pageCount} 頁 · ${formatBytes(totalBytes)}`
+            : `${files.length} 個檔案 · ${formatBytes(totalBytes)}`}
         </p>
         <button className="primary-button" onClick={handleSave}>
           {shareable ? '儲存／分享' : '下載檔案'}

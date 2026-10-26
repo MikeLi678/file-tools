@@ -69,3 +69,34 @@ test('pdf.js 的 worker 有進預快取', async ({ page }) => {
     )
     .toBe(true)
 })
+
+test('離線時也能把 PDF 轉成圖片', async ({ page, context }) => {
+  await page.goto('./')
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(async () => {
+          const names = await caches.keys()
+          for (const name of names) {
+            const keys = await (await caches.open(name)).keys()
+            if (keys.some(r => r.url.includes('pdf.worker'))) return true
+          }
+          return false
+        }),
+      { timeout: 15_000 },
+    )
+    .toBe(true)
+
+  await context.setOffline(true)
+  await page.reload({ waitUntil: 'load' })
+
+  await page.getByRole('button', { name: /PDF 轉圖片/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await page.getByTestId('page-tile').nth(0).click()
+  await page.getByRole('button', { name: /匯出勾選的 \d+ 頁為圖片/ }).click()
+
+  // 轉圖片靠 pdf.js worker，worker 沒被預快取的話這裡會失敗
+  await expect(page.getByRole('heading', { name: '匯出完成' })).toBeVisible({ timeout: 20_000 })
+  await context.setOffline(false)
+})

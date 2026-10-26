@@ -13,7 +13,7 @@ import type { ExportedFile } from './core/output'
 type View =
   | { name: 'home' }
   | { name: 'editor'; tool: ToolId }
-  | { name: 'result'; tool: ToolId; file: ExportedFile }
+  | { name: 'result'; tool: ToolId; files: ExportedFile[] }
   | { name: 'scanner'; tool: ToolId }
 
 export function App() {
@@ -50,7 +50,7 @@ export function App() {
     return (
       <div className="app">
         <ExportResult
-          file={view.file}
+          files={view.files}
           onBackToEditor={() => setView({ name: 'editor', tool: view.tool })}
           onHome={goHome}
         />
@@ -94,7 +94,7 @@ export function App() {
         thumbnailer={thumbnailer}
         onBack={goHome}
         onCamera={() => setView({ name: 'scanner', tool: view.tool })}
-        onExported={file => setView({ name: 'result', tool: view.tool, file })}
+        onExported={files => setView({ name: 'result', tool: view.tool, files })}
       />
     </div>
   )

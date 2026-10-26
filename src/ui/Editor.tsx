@@ -6,6 +6,8 @@ import { ActionBar } from './ActionBar'
 import { loadIncomingFiles } from '../loadFiles'
 import { exportToPdf } from '../core/exporter'
 import { outputFileName, renderImageToJpeg, type ExportedFile } from '../core/output'
+import { pagesToJpegBlobs, type ImageExportProgress } from '../core/pageToImage'
+import { LIMITS } from '../core/limits'
 import type { DocumentState } from '../types'
 import type { DocumentAction } from '../state/documentReducer'
 import type { ToolDefinition } from '../tools'
@@ -18,12 +20,12 @@ type Props = {
   thumbnailer: Thumbnailer
   onBack: () => void
   onCamera: () => void
-  onExported: (file: ExportedFile) => void
+  onExported: (files: ExportedFile[]) => void
 }
 
 export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, onExported }: Props) {
   const [busy, setBusy] = useState(false)
-  const [exporting, setExporting] = useState(false)
+  const [progress, setProgress] = useState<ImageExportProgress | null>(null)
   // 使用者在載入途中離開編輯器時，進行中的 promise 不能再 dispatch，
   // 否則會把上一次的頁面寫進已重置的 state。
   const mounted = useRef(true)
@@ -54,14 +56,14 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
   const handleExport = async (format: 'pdf' | 'jpg' = 'pdf') => {
     const pages = exportPages
     if (pages.length === 0) return
-    setExporting(true)
+    setProgress({ done: 0, total: 1 })
     try {
       // 必須先取出成變數，直接寫 pages[0].source.blob 不會被 TS 窄化
       const single = pages.length === 1 ? pages[0] : null
       if (format === 'jpg' && single && single.source.kind === 'image') {
         const blob = await renderImageToJpeg(single.source.blob, single.rotation)
         if (!mounted.current) return
-        onExported({ blob, fileName: outputFileName(new Date(), 'jpg'), pageCount: 1 })
+        onExported([{ blob, fileName: outputFileName(new Date(), 'jpg'), pageCount: 1 }])
         return
       }
       const bytes = await exportToPdf({ pages, loadedFiles: state.loadedFiles })
@@ -70,11 +72,48 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
       // 用斷言而不是 new Uint8Array(bytes)，後者會把整份 PDF 再複製一次。
       const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' })
       if (!mounted.current) return
-      onExported({ blob, fileName: outputFileName(new Date(), 'pdf'), pageCount: pages.length })
+      onExported([{ blob, fileName: outputFileName(new Date(), 'pdf'), pageCount: pages.length }])
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '匯出失敗')
     } finally {
-      if (mounted.current) setExporting(false)
+      if (mounted.current) setProgress(null)
+    }
+  }
+
+  const handleExportImages = async () => {
+    const pages = state.pages.filter(p => p.selected)
+    if (pages.length === 0) return
+
+    if (pages.length > LIMITS.maxImageExportPages) {
+      dispatch({
+        type: 'load',
+        pages: [],
+        files: [],
+        errors: [{ fileName: `${pages.length} 頁`, reason: 'limit-image-pages' }],
+      })
+      return
+    }
+
+    setProgress({ done: 0, total: pages.length })
+    try {
+      const blobs = await pagesToJpegBlobs({
+        pages,
+        loadedFiles: state.loadedFiles,
+        onProgress: setProgress,
+      })
+      if (!mounted.current) return
+      const now = new Date()
+      onExported(
+        blobs.map((blob, index) => ({
+          blob,
+          fileName: outputFileName(now, 'jpg', blobs.length === 1 ? undefined : index + 1),
+          pageCount: 1,
+        })),
+      )
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '轉換失敗')
+    } finally {
+      if (mounted.current) setProgress(null)
     }
   }
 
@@ -115,7 +154,9 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
           onInvert={() => dispatch({ type: 'invertSelection' })}
           onRemoveSelected={() => dispatch({ type: 'removeSelected' })}
           onExport={() => handleExport('pdf')}
-          exporting={exporting}
+          progress={progress}
+          primaryExport={tool.primaryExport}
+          onExportImages={handleExportImages}
           jpegAvailable={jpegAvailable}
           onExportJpeg={() => handleExport('jpg')}
         />

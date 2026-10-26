@@ -9,10 +9,14 @@ export type ExportedFile = {
 
 const pad = (value: number) => String(value).padStart(2, '0')
 
-/** 全 ASCII 檔名，避免某些系統處理中文檔名時出錯 */
-export function outputFileName(date: Date, extension: 'pdf' | 'jpg'): string {
+/**
+ * 全 ASCII 檔名，避免某些系統處理中文檔名時出錯。
+ * index 有值時加在副檔名之前，用於一次匯出多個檔案的情境。
+ */
+export function outputFileName(date: Date, extension: 'pdf' | 'jpg', index?: number): string {
   const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`
-  return `file-tools-${stamp}.${extension}`
+  const suffix = index === undefined ? '' : `-${index}`
+  return `file-tools-${stamp}${suffix}.${extension}`
 }
 
 export function formatBytes(bytes: number): string {
@@ -49,10 +53,10 @@ function toFile(file: ExportedFile): File {
   return new File([file.blob], file.fileName, { type })
 }
 
-export function canShareFiles(file: ExportedFile): boolean {
+export function canShareFiles(files: ExportedFile[]): boolean {
   if (typeof navigator === 'undefined' || !navigator.canShare) return false
   try {
-    return navigator.canShare({ files: [toFile(file)] })
+    return navigator.canShare({ files: files.map(toFile) })
   } catch {
     return false
   }
@@ -62,11 +66,15 @@ export function canShareFiles(file: ExportedFile): boolean {
  * 必須從使用者點擊的同步呼叫鏈內被呼叫。
  * 若先 await 產生檔案再呼叫，Safari 會判定非使用者觸發而拒絕，
  * 所以 UI 的流程是「匯出 -> 結果畫面 -> 使用者再點一次」。
+ *
+ * 單檔是多檔的特例。不支援多檔分享時退回逐個下載。
  */
-export async function shareFile(file: ExportedFile): Promise<'shared' | 'cancelled' | 'downloaded'> {
-  if (canShareFiles(file)) {
+export async function shareFiles(files: ExportedFile[]): Promise<'shared' | 'cancelled' | 'downloaded'> {
+  if (files.length === 0) throw new Error('沒有可分享的檔案')
+
+  if (canShareFiles(files)) {
     try {
-      await navigator.share({ files: [toFile(file)] })
+      await navigator.share({ files: files.map(toFile) })
       return 'shared'
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return 'cancelled'
@@ -74,15 +82,18 @@ export async function shareFile(file: ExportedFile): Promise<'shared' | 'cancell
     }
   }
 
-  const url = URL.createObjectURL(file.blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = file.fileName
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  // 放寬到 60 秒。iOS Safari 對大檔會先跳確認框，太早 revoke 會讓下載失敗。
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  for (const file of files) {
+    const url = URL.createObjectURL(file.blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = file.fileName
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    // 立刻 revoke 會讓部分瀏覽器來不及開始下載。iOS Safari 對大檔會先跳確認框，
+    // 太早 revoke 會讓使用者點下去時下載失敗，所以放寬到 60 秒。
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
   return 'downloaded'
 }
 

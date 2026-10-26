@@ -69,10 +69,10 @@ test('抽頁：勾選兩頁匯出只有兩頁，反轉後再匯出剩一頁', as
 
   await page.getByTestId('page-tile').nth(0).click()
   await page.getByTestId('page-tile').nth(2).click()
-  await expect(page.getByRole('button', { name: '匯出勾選的 2 頁' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '匯出勾選的 2 頁', exact: true })).toBeEnabled()
 
   const first = page.waitForEvent('download')
-  await page.getByRole('button', { name: '匯出勾選的 2 頁' }).click()
+  await page.getByRole('button', { name: '匯出勾選的 2 頁', exact: true }).click()
   await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
   const firstDoc = await PDFDocument.load(new Uint8Array(readFileSync((await (await first).path())!)))
   expect(firstDoc.getPageCount()).toBe(2)
@@ -81,7 +81,7 @@ test('抽頁：勾選兩頁匯出只有兩頁，反轉後再匯出剩一頁', as
   await page.getByRole('button', { name: '反轉勾選' }).click()
 
   const second = page.waitForEvent('download')
-  await page.getByRole('button', { name: '匯出勾選的 1 頁' }).click()
+  await page.getByRole('button', { name: '匯出勾選的 1 頁', exact: true }).click()
   await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
   const secondDoc = await PDFDocument.load(new Uint8Array(readFileSync((await (await second).path())!)))
   expect(secondDoc.getPageCount()).toBe(1)

@@ -9,6 +9,14 @@ describe('outputFileName', () => {
   it('月、日、時、分都補零', () => {
     expect(outputFileName(new Date(2026, 0, 2, 3, 4), 'jpg')).toBe('file-tools-20260102-0304.jpg')
   })
+
+  it('帶序號時加在副檔名之前', () => {
+    expect(outputFileName(new Date(2026, 9, 26, 11, 30), 'jpg', 1)).toBe('file-tools-20261026-1130-1.jpg')
+  })
+
+  it('不帶序號時維持原樣', () => {
+    expect(outputFileName(new Date(2026, 9, 26, 11, 30), 'jpg')).toBe('file-tools-20261026-1130.jpg')
+  })
 })
 
 describe('formatBytes', () => {

@@ -15,6 +15,7 @@ export const ERROR_MESSAGES: Record<LoadErrorReason, string> = {
   'file-too-large': `單一檔案不能超過 ${LIMITS.maxFileBytes / 1024 / 1024} MB`,
   'limit-pages': `加入後會超過 ${LIMITS.maxPages} 頁的上限`,
   'limit-total-bytes': `加入後會超過 ${LIMITS.maxTotalBytes / 1024 / 1024} MB 的總量上限`,
+  'limit-image-pages': `一次最多只能轉 ${LIMITS.maxImageExportPages} 頁為圖片`,
 }
 
 type LoadPayload = Extract<DocumentAction, { type: 'load' }>
