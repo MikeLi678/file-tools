@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { canShareFiles, formatBytes, shareFile, type ExportedFile } from '../core/output'
+import { canShareFiles, formatBytes, sanitizeFileName, shareFile, type ExportedFile } from '../core/output'
 
 type Props = {
   file: ExportedFile
@@ -8,12 +8,20 @@ type Props = {
 }
 
 export function ExportResult({ file, onBackToEditor, onHome }: Props) {
+  // file.fileName 形如 file-tools-20261026-1130.pdf，拆成基底與副檔名。
+  // 使用者只改基底，副檔名由程式決定。
+  const dotIndex = file.fileName.lastIndexOf('.')
+  const defaultBase = file.fileName.slice(0, dotIndex)
+  const extension = file.fileName.slice(dotIndex)
+  const [nameInput, setNameInput] = useState(defaultBase)
+  const finalName = sanitizeFileName(nameInput, defaultBase) + extension
+
   const [done, setDone] = useState(false)
-  const shareable = canShareFiles(file)
+  const shareable = canShareFiles({ ...file, fileName: finalName })
 
   // 不要 await 後才呼叫 shareFile——它內部需要同步進入 navigator.share
   const handleSave = () => {
-    shareFile(file)
+    shareFile({ ...file, fileName: finalName })
       .then(result => {
         if (result !== 'cancelled') setDone(true)
       })
@@ -30,7 +38,19 @@ export function ExportResult({ file, onBackToEditor, onHome }: Props) {
       </header>
 
       <div className="result-card">
-        <p className="result-name">{file.fileName}</p>
+        <label className="name-field">
+          <span className="name-label">檔名</span>
+          <span className="name-row">
+            <input
+              className="name-input"
+              value={nameInput}
+              onChange={event => setNameInput(event.target.value)}
+              aria-label="輸出檔名"
+              enterKeyHint="done"
+            />
+            <span className="name-extension">{extension}</span>
+          </span>
+        </label>
         <p className="result-meta">
           {file.pageCount} 頁 · {formatBytes(file.blob.size)}
         </p>

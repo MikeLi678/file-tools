@@ -199,3 +199,29 @@ test('沒有勾選任何頁時不顯示刪除按鈕', async ({ page }) => {
   await page.getByRole('button', { name: '勾選抽頁' }).click()
   await expect(page.getByRole('button', { name: /刪除勾選的/ })).toHaveCount(0)
 })
+
+test('可以自訂輸出檔名', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await expect(page.getByTestId('page-tile')).toHaveCount(3)
+
+  await page.getByRole('button', { name: '匯出 PDF' }).click()
+  await page.getByLabel('輸出檔名').fill('我的報告')
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
+  expect((await download).suggestedFilename()).toBe('我的報告.pdf')
+})
+
+test('檔名留空時退回預設', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /合併 PDF/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await page.getByRole('button', { name: '匯出 PDF' }).click()
+  await page.getByLabel('輸出檔名').fill('')
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: /儲存／分享|下載檔案/ }).click()
+  expect((await download).suggestedFilename()).toMatch(/^file-tools-\d{8}-\d{4}\.pdf$/)
+})

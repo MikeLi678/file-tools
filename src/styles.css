@@ -310,3 +310,37 @@ body {
   margin: 12px 0 0;
   padding: 8px 12px;
 }
+
+.name-field { display: block; margin-bottom: 16px; }
+
+.name-label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--bg);
+}
+
+.name-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 16px; /* 低於 16px 時 iOS Safari 會在聚焦時自動放大頁面 */
+  color: var(--text);
+}
+
+.name-input:focus { outline: none; }
+
+.name-extension { color: var(--muted); font-size: 14px; flex: none; }

@@ -21,6 +21,25 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** 檔名長度上限。超過的部分截斷，避免某些系統處理超長檔名時出錯 */
+const MAX_FILE_NAME_LENGTH = 80
+
+/**
+ * 把使用者輸入的檔名整理成可用的形式。
+ *
+ * 過濾的是 Windows 與 macOS 都不允許的字元加上控制字元——即使這個 app 只跑在
+ * iOS 上，檔案會被分享出去到別的系統，所以用最嚴格的那一套。
+ * 留空或全是被過濾掉的字元時退回預設檔名，不報錯。
+ */
+export function sanitizeFileName(input: string, fallback: string): string {
+  const cleaned = input
+    // eslint-disable-next-line no-control-regex
+    .replace(/[/\\:*?"<>|\u0000-\u001f]/g, '')
+    .trim()
+    .slice(0, MAX_FILE_NAME_LENGTH)
+  return cleaned.length > 0 ? cleaned : fallback
+}
+
 function toFile(file: ExportedFile): File {
   const type = file.fileName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
   return new File([file.blob], file.fileName, { type })
