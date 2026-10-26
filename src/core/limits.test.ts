@@ -74,3 +74,19 @@ describe('checkLimits', () => {
     expect(result.rejected).toEqual([{ fileName: 'both.pdf', reason: 'limit-pages' }])
   })
 })
+
+describe('v1.1 的轉圖片上限', () => {
+  it('轉圖片的長邊是 2000px', () => {
+    expect(LIMITS.imageExportEdge).toBe(2000)
+  })
+
+  it('一次最多轉 20 頁', () => {
+    expect(LIMITS.maxImageExportPages).toBe(20)
+  })
+
+  it('轉圖片的長邊小於相機影格的上限', () => {
+    // 2000px 對 A4 約 170dpi，對分享用的圖片足夠；
+    // 比 maxCaptureEdge 小是因為轉圖片會一次處理多頁，記憶體壓力更大
+    expect(LIMITS.imageExportEdge).toBeLessThan(LIMITS.maxCaptureEdge)
+  })
+})

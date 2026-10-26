@@ -1,11 +1,6 @@
-import * as pdfjs from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { pdfjs } from './pdfjs'
 import { LIMITS } from './limits'
 import type { LoadedPdf, Page, Rotation } from '../types'
-
-// 用 ?url 匯入是為了讓 worker 成為建置產物的一部分，
-// Task 15 的 PWA 預快取才抓得到它。離線時少了這個檔，縮圖會整批失敗。
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
 export type Thumbnailer = {
   get(page: Page, loadedFiles: Record<string, LoadedPdf>): Promise<string>
