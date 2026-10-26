@@ -9,6 +9,7 @@ import {
 } from 'react'
 import type { LoadedPdf, Page } from '../types'
 import type { Thumbnailer } from '../core/thumbnailer'
+import { LIMITS } from '../core/limits'
 
 type Props = {
   page: Page
@@ -18,6 +19,7 @@ type Props = {
   dragging?: boolean
   containerRef?: Ref<HTMLDivElement>
   containerProps?: HTMLAttributes<HTMLDivElement>
+  onSign: (pageId: string) => void
   onRotate: (pageId: string) => void
   onRemove: (pageId: string) => void
   selectMode: boolean
@@ -32,6 +34,7 @@ export function PageTile({
   dragging = false,
   containerRef,
   containerProps,
+  onSign,
   onRotate,
   onRemove,
   selectMode,
@@ -106,6 +109,11 @@ export function PageTile({
     >
       <div className="page-thumb">
         {url && !failed && <img src={url} alt={`第 ${index + 1} 頁`} draggable={false} />}
+        {page.overlays.length > 0 && (
+          <span className="thumb-signed" aria-label="已簽名">
+            已簽名
+          </span>
+        )}
         {!url && !failed && <span className="thumb-placeholder">載入中</span>}
         {failed && <span className="thumb-placeholder">縮圖失敗</span>}
       </div>
@@ -116,6 +124,16 @@ export function PageTile({
         </div>
       ) : (
         <div className="tile-actions">
+          <button
+            className="tile-button"
+            aria-label={`簽名第 ${index + 1} 頁`}
+            data-testid="sign"
+            disabled={page.overlays.length >= LIMITS.maxOverlaysPerPage}
+            {...stopDrag}
+            onClick={() => onSign(page.id)}
+          >
+            簽名
+          </button>
           <button
             className="tile-button"
             aria-label={`旋轉第 ${index + 1} 頁`}

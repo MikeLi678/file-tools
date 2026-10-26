@@ -4,7 +4,11 @@ import { PageGrid } from './PageGrid'
 import { ErrorBanner } from './ErrorBanner'
 import { ActionBar } from './ActionBar'
 import { loadIncomingFiles } from '../loadFiles'
-import { exportToPdf } from '../core/exporter'
+import { SignatureCapture } from './SignatureCapture'
+import { SignatureLibrary } from './SignatureLibrary'
+import { SignaturePlacer } from './SignaturePlacer'
+import { exportToPdf, type SignatureAsset } from '../core/exporter'
+import { createSignatureStore, type SignatureStore, type StoredSignature } from '../core/signature/store'
 import { outputFileName, renderImageToJpeg, type ExportedFile } from '../core/output'
 import { pagesToJpegBlobs, type ImageExportProgress } from '../core/pageToImage'
 import { LIMITS } from '../core/limits'
@@ -26,6 +30,15 @@ type Props = {
 export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, onExported }: Props) {
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<ImageExportProgress | null>(null)
+  const [store, setStore] = useState<SignatureStore | null>(null)
+  const [signatures, setSignatures] = useState<StoredSignature[]>([])
+  // null = 沒在簽名流程；library = 挑選；capture = 手寫；place = 定位
+  const [signFlow, setSignFlow] = useState<
+    | null
+    | { step: 'library'; pageId: string }
+    | { step: 'capture'; pageId: string }
+    | { step: 'place'; pageId: string; signature: StoredSignature }
+  >(null)
   // 使用者在載入途中離開編輯器時，進行中的 promise 不能再 dispatch，
   // 否則會把上一次的頁面寫進已重置的 state。
   const mounted = useRef(true)
@@ -35,6 +48,59 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
       mounted.current = false
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    createSignatureStore().then(async created => {
+      if (cancelled) return
+      setStore(created)
+      const list = await created.list()
+      if (!cancelled) setSignatures(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const signaturesById: Record<string, StoredSignature> = Object.fromEntries(
+    signatures.map(s => [s.id, s]),
+  )
+
+  // 只轉換實際被用到的簽名，不必每次匯出都把庫裡全部讀成位元組
+  const signatureAssets = async (pages: typeof state.pages): Promise<Record<string, SignatureAsset>> => {
+    const used = new Set(pages.flatMap(p => p.overlays).map(o => o.signatureId))
+    const out: Record<string, SignatureAsset> = {}
+    for (const stored of signatures) {
+      if (!used.has(stored.id)) continue
+      out[stored.id] = {
+        id: stored.id,
+        bytes: new Uint8Array(await stored.blob.arrayBuffer()),
+        width: stored.width,
+        height: stored.height,
+      }
+    }
+    return out
+  }
+
+  const refreshSignatures = async () => {
+    if (!store) return
+    const list = await store.list()
+    if (mounted.current) setSignatures(list)
+  }
+
+  const handleDeleteSignature = async (id: string) => {
+    if (!store) return
+    await store.remove(id)
+    // 連帶移除所有引用它的覆蓋層，否則匯出時會靜默跳過，使用者不知道簽名為何不見
+    for (const page of state.pages) {
+      for (const overlay of page.overlays) {
+        if (overlay.signatureId === id) {
+          dispatch({ type: 'removeOverlay', pageId: page.id, overlayId: overlay.id })
+        }
+      }
+    }
+    await refreshSignatures()
+  }
 
   const handleFiles = async (files: File[]) => {
     setBusy(true)
@@ -66,7 +132,7 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
         onExported([{ blob, fileName: outputFileName(new Date(), 'jpg'), pageCount: 1 }])
         return
       }
-      const bytes = await exportToPdf({ pages, loadedFiles: state.loadedFiles, signatures: {} })
+      const bytes = await exportToPdf({ pages, loadedFiles: state.loadedFiles, signatures: await signatureAssets(pages) })
       // pdf-lib 的 save() 實際回傳一般 ArrayBuffer，但型別標成 ArrayBufferLike
       // （理論上可能是 SharedArrayBuffer），直接傳給 Blob 會型別不符。
       // 用斷言而不是 new Uint8Array(bytes)，後者會把整份 PDF 再複製一次。
@@ -99,6 +165,7 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
       const blobs = await pagesToJpegBlobs({
         pages,
         loadedFiles: state.loadedFiles,
+        signatures: signaturesById,
         onProgress: setProgress,
       })
       if (!mounted.current) return
@@ -114,6 +181,50 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
       window.alert(error instanceof Error ? error.message : '轉換失敗')
     } finally {
       if (mounted.current) setProgress(null)
+    }
+  }
+
+  if (signFlow) {
+    if (signFlow.step === 'capture') {
+      return (
+        <SignatureCapture
+          onCancel={() => setSignFlow({ step: 'library', pageId: signFlow.pageId })}
+          onSaved={async signature => {
+            await store?.save(signature)
+            await refreshSignatures()
+            if (mounted.current) setSignFlow({ step: 'place', pageId: signFlow.pageId, signature })
+          }}
+        />
+      )
+    }
+    if (signFlow.step === 'library') {
+      return (
+        <SignatureLibrary
+          signatures={signatures}
+          persistent={store?.persistent ?? true}
+          onPick={signature => setSignFlow({ step: 'place', pageId: signFlow.pageId, signature })}
+          onDelete={handleDeleteSignature}
+          onNew={() => setSignFlow({ step: 'capture', pageId: signFlow.pageId })}
+          onCancel={() => setSignFlow(null)}
+        />
+      )
+    }
+    const pageIndex = state.pages.findIndex(p => p.id === signFlow.pageId)
+    const page = state.pages[pageIndex]
+    if (page) {
+      return (
+        <SignaturePlacer
+          page={page}
+          pageIndex={pageIndex}
+          loadedFiles={state.loadedFiles}
+          signature={signFlow.signature}
+          signatures={signaturesById}
+          onAdd={overlay => dispatch({ type: 'addOverlay', pageId: page.id, overlay })}
+          onUpdate={(overlayId, patch) => dispatch({ type: 'updateOverlay', pageId: page.id, overlayId, patch })}
+          onRemove={overlayId => dispatch({ type: 'removeOverlay', pageId: page.id, overlayId })}
+          onDone={() => setSignFlow(null)}
+        />
+      )
     }
   }
 
@@ -138,6 +249,7 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
           loadedFiles={state.loadedFiles}
           thumbnailer={thumbnailer}
           onMove={(from, to) => dispatch({ type: 'move', from, to })}
+          onSign={pageId => setSignFlow({ step: 'library', pageId })}
           onRotate={pageId => dispatch({ type: 'rotate', pageId })}
           onRemove={pageId => dispatch({ type: 'remove', pageId })}
           selectMode={state.selectMode}

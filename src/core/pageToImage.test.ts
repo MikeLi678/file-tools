@@ -44,7 +44,7 @@ describe('fitToEdge', () => {
 
 describe('pagesToJpegBlobs 的錯誤路徑', () => {
   it('頁面清單為空時丟出明確錯誤', async () => {
-    await expect(pagesToJpegBlobs({ pages: [], loadedFiles: {} })).rejects.toThrow('沒有可轉換的頁面')
+    await expect(pagesToJpegBlobs({ pages: [], loadedFiles: {}, signatures: {} })).rejects.toThrow('沒有可轉換的頁面')
   })
 
   it('引用了不存在的來源檔案時丟出明確錯誤', async () => {
@@ -55,6 +55,6 @@ describe('pagesToJpegBlobs 的錯誤路徑', () => {
       selected: false,
       overlays: [],
     }
-    await expect(pagesToJpegBlobs({ pages: [page], loadedFiles: {} })).rejects.toThrow('找不到來源檔案')
+    await expect(pagesToJpegBlobs({ pages: [page], loadedFiles: {}, signatures: {} })).rejects.toThrow('找不到來源檔案')
   })
 })

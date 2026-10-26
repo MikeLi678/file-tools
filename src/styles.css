@@ -131,6 +131,7 @@ body {
 }
 
 .page-thumb {
+  position: relative;
   aspect-ratio: 3 / 4;
   display: flex;
   align-items: center;
@@ -465,4 +466,15 @@ body {
   width: 44px;
   height: 44px;
   transform: translate(-50%, -50%);
+}
+
+.thumb-signed {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 11px;
 }
