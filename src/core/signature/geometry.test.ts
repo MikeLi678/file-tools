@@ -201,19 +201,20 @@ describe('clampOverlayBox', () => {
     expect(box.width * 4).toBeLessThanOrEqual(1 + 1e-9)
   })
 
+  // 下面兩條的期望值刻意寫成硬編碼的數字，不經過 overlayHeight 計算。
+  // 用 overlayHeight 算期望值的話，實作漏掉 / pageAspect 時斷言會跟著一起錯，
+  // 結果自洽而測試照樣通過——那種測試擋不住任何東西。
+  // 漏掉 / pageAspect 時這兩條算出的 y 都會變成 0.8，與下面的數字不同，所以會變紅。
   it('在 A4 橫向不會讓簽名溢出頁底', () => {
-    const pageAspect = 595.28 / 841.89
-    const box = clampOverlayBox({ x: 0.2, y: 0.95, width: 0.4 }, 0.5, pageAspect)
-    const height = overlayHeight(box.width, 0.5, pageAspect)
-    expect(box.y + height).toBeLessThanOrEqual(1 + 1e-9)
+    const box = clampOverlayBox({ x: 0.2, y: 0.95, width: 0.4 }, 0.5, 595.28 / 841.89)
+    expect(box.width).toBeCloseTo(0.4, 10)
+    expect(box.y).toBeCloseTo(0.7171448730009407, 12)
   })
 
-  it('在 A4 直向可以貼到頁底', () => {
-    const pageAspect = 841.89 / 595.28
-    const box = clampOverlayBox({ x: 0.2, y: 0.99, width: 0.4 }, 0.5, pageAspect)
-    const height = overlayHeight(box.width, 0.5, pageAspect)
-    // 夾限後應該剛好貼底，而不是在上面留一段空隙
-    expect(box.y + height).toBeCloseTo(1, 9)
+  it('在 A4 直向可以貼到頁底，不留空隙', () => {
+    const box = clampOverlayBox({ x: 0.2, y: 0.99, width: 0.4 }, 0.5, 841.89 / 595.28)
+    expect(box.width).toBeCloseTo(0.4, 10)
+    expect(box.y).toBeCloseTo(0.8585848507524736, 12)
   })
 
   it('高度保護會讓寬度低於下限（放得進頁面優先）', () => {
