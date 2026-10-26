@@ -53,6 +53,7 @@ describe('pagesToJpegBlobs 的錯誤路徑', () => {
       source: { kind: 'pdf', fileId: 'missing', pageIndex: 0 },
       rotation: 0,
       selected: false,
+      overlays: [],
     }
     await expect(pagesToJpegBlobs({ pages: [page], loadedFiles: {} })).rejects.toThrow('找不到來源檔案')
   })

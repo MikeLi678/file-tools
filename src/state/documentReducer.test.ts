@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { documentReducer, initialDocumentState, totalLoadedBytes } from './documentReducer'
+import { LIMITS } from '../core/limits'
 import type { DocumentState, LoadedPdf, Page } from '../types'
 
 const pdfPage = (id: string, fileId: string, pageIndex: number): Page => ({
@@ -7,6 +8,7 @@ const pdfPage = (id: string, fileId: string, pageIndex: number): Page => ({
   source: { kind: 'pdf', fileId, pageIndex },
   rotation: 0,
   selected: false,
+  overlays: [],
 })
 
 const loaded = (fileId: string, pageCount: number, size = 10): LoadedPdf => ({
@@ -199,7 +201,7 @@ describe('totalLoadedBytes', () => {
       type: 'load',
       pages: [
         pdfPage('p1', 'a', 0),
-        { id: 'img', source: { kind: 'image', blob: new Blob([new Uint8Array(100)]) }, rotation: 0, selected: false },
+        { id: 'img', source: { kind: 'image', blob: new Blob([new Uint8Array(100)]) }, rotation: 0, selected: false, overlays: [] },
       ],
       files: [loaded('a', 1, 128)],
       errors: [],
@@ -211,5 +213,80 @@ describe('totalLoadedBytes', () => {
 describe('reset', () => {
   it('回到初始狀態', () => {
     expect(documentReducer(stateWithThreePages(), { type: 'reset' })).toEqual(initialDocumentState)
+  })
+})
+
+describe('覆蓋層', () => {
+  const overlay = { id: 'o1', signatureId: 's1', x: 0.1, y: 0.8, width: 0.3 }
+
+  it('addOverlay 加到指定頁', () => {
+    const start = stateWithThreePages()
+    const next = documentReducer(start, { type: 'addOverlay', pageId: 'p2', overlay })
+    expect(next.pages[0].overlays).toEqual([])
+    expect(next.pages[1].overlays).toEqual([overlay])
+    expect(next.pages[2].overlays).toEqual([])
+  })
+
+  it('addOverlay 達到每頁上限時不再新增', () => {
+    let state = stateWithThreePages()
+    for (let i = 0; i < LIMITS.maxOverlaysPerPage + 3; i += 1) {
+      state = documentReducer(state, {
+        type: 'addOverlay',
+        pageId: 'p1',
+        overlay: { ...overlay, id: `o${i}` },
+      })
+    }
+    expect(state.pages[0].overlays).toHaveLength(LIMITS.maxOverlaysPerPage)
+  })
+
+  it('addOverlay 指到不存在的頁面時什麼都不做', () => {
+    const state = stateWithThreePages()
+    const next = documentReducer(state, { type: 'addOverlay', pageId: 'nope', overlay })
+    expect(next.pages.every(p => p.overlays.length === 0)).toBe(true)
+  })
+
+  it('updateOverlay 只改指定的那一個', () => {
+    let state = stateWithThreePages()
+    state = documentReducer(state, { type: 'addOverlay', pageId: 'p1', overlay })
+    state = documentReducer(state, {
+      type: 'addOverlay',
+      pageId: 'p1',
+      overlay: { ...overlay, id: 'o2' },
+    })
+    state = documentReducer(state, {
+      type: 'updateOverlay',
+      pageId: 'p1',
+      overlayId: 'o2',
+      patch: { x: 0.5 },
+    })
+    expect(state.pages[0].overlays[0].x).toBeCloseTo(0.1, 10)
+    expect(state.pages[0].overlays[1].x).toBeCloseTo(0.5, 10)
+  })
+
+  it('removeOverlay 只刪指定的那一個', () => {
+    let state = stateWithThreePages()
+    state = documentReducer(state, { type: 'addOverlay', pageId: 'p1', overlay })
+    state = documentReducer(state, {
+      type: 'addOverlay',
+      pageId: 'p1',
+      overlay: { ...overlay, id: 'o2' },
+    })
+    state = documentReducer(state, { type: 'removeOverlay', pageId: 'p1', overlayId: 'o1' })
+    expect(state.pages[0].overlays.map(o => o.id)).toEqual(['o2'])
+  })
+
+  it('旋轉頁面不動覆蓋層座標（存的是未旋轉空間）', () => {
+    let state = stateWithThreePages()
+    state = documentReducer(state, { type: 'addOverlay', pageId: 'p1', overlay })
+    state = documentReducer(state, { type: 'rotate', pageId: 'p1' })
+    expect(state.pages[0].rotation).toBe(90)
+    expect(state.pages[0].overlays).toEqual([overlay])
+  })
+
+  it('刪除頁面會連帶刪掉它的覆蓋層', () => {
+    let state = stateWithThreePages()
+    state = documentReducer(state, { type: 'addOverlay', pageId: 'p1', overlay })
+    state = documentReducer(state, { type: 'remove', pageId: 'p1' })
+    expect(state.pages.map(p => p.id)).toEqual(['p2', 'p3'])
   })
 })

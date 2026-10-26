@@ -90,3 +90,15 @@ describe('v1.1 的轉圖片上限', () => {
     expect(LIMITS.imageExportEdge).toBeLessThan(LIMITS.maxCaptureEdge)
   })
 })
+
+it('簽名相關的上限都是正數且合理', () => {
+  expect(LIMITS.maxStoredSignatures).toBeGreaterThan(0)
+  expect(LIMITS.maxOverlaysPerPage).toBeGreaterThan(0)
+  expect(LIMITS.signatureCaptureEdge).toBeGreaterThan(0)
+  expect(LIMITS.maxSignatureBytes).toBeGreaterThan(0)
+})
+
+it('簽名擷取的長邊小於掃描影格的上限', () => {
+  // 簽名是線條不是照片，不需要跟掃描件一樣的解析度
+  expect(LIMITS.signatureCaptureEdge).toBeLessThan(LIMITS.maxCaptureEdge)
+})

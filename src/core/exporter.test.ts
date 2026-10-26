@@ -20,6 +20,7 @@ const pdfPage = (id: string, fileId: string, pageIndex: number, rotation: Rotati
   source: { kind: 'pdf', fileId, pageIndex },
   rotation,
   selected: false,
+  overlays: [],
 })
 
 describe('exportToPdf', () => {
@@ -93,7 +94,7 @@ describe('exportToPdf', () => {
     const bytes = await exportToPdf({
       pages: [
         pdfPage('p1', 'a', 0),
-        { id: 'img', source: { kind: 'image', blob: jpeg }, rotation: 0, selected: false },
+        { id: 'img', source: { kind: 'image', blob: jpeg }, rotation: 0, selected: false, overlays: [] },
         pdfPage('p2', 'a', 1),
       ],
       loadedFiles: { a: three },
@@ -108,7 +109,7 @@ describe('exportToPdf', () => {
   it('只有一張影像時也能匯出', async () => {
     const png = new Blob([fixture('portrait.png')])
     const bytes = await exportToPdf({
-      pages: [{ id: 'img', source: { kind: 'image', blob: png }, rotation: 90, selected: false }],
+      pages: [{ id: 'img', source: { kind: 'image', blob: png }, rotation: 90, selected: false, overlays: [] }],
       loadedFiles: {},
     })
     const out = await PDFDocument.load(bytes)

@@ -72,7 +72,7 @@ export function App() {
             dispatch({
               type: 'load',
               pages: check.accepted.length
-                ? [{ id: newId(), source: { kind: 'image', blob }, rotation: 0, selected: false }]
+                ? [{ id: newId(), source: { kind: 'image', blob }, rotation: 0, selected: false, overlays: [] }]
                 : [],
               files: [],
               errors: check.rejected,

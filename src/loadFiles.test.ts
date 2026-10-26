@@ -15,6 +15,7 @@ function stateWithPages(count: number): DocumentState {
     source: { kind: 'pdf', fileId: 'existing', pageIndex: i },
     rotation: 0,
     selected: false,
+    overlays: [],
   }))
   return { ...initialDocumentState, pages }
 }

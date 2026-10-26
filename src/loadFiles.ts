@@ -95,10 +95,10 @@ export async function loadIncomingFiles(files: File[], state: DocumentState): Pr
     if (entry.kind === 'pdf') {
       acceptedFiles.push(entry.file)
       for (let i = 0; i < entry.file.pageCount; i++) {
-        pages.push({ id: newId(), source: { kind: 'pdf', fileId: entry.file.fileId, pageIndex: i }, rotation: 0, selected: false })
+        pages.push({ id: newId(), source: { kind: 'pdf', fileId: entry.file.fileId, pageIndex: i }, rotation: 0, selected: false, overlays: [] })
       }
     } else {
-      pages.push({ id: newId(), source: { kind: 'image', blob: entry.blob }, rotation: 0, selected: false })
+      pages.push({ id: newId(), source: { kind: 'image', blob: entry.blob }, rotation: 0, selected: false, overlays: [] })
     }
   }
 

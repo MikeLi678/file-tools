@@ -1,4 +1,5 @@
-import type { DocumentState, LoadError, LoadedPdf, Page, Rotation } from '../types'
+import { LIMITS } from '../core/limits'
+import type { DocumentState, LoadError, LoadedPdf, Page, Rotation, SignatureOverlay } from '../types'
 
 export type DocumentAction =
   | { type: 'load'; pages: Page[]; files: LoadedPdf[]; errors: LoadError[] }
@@ -9,6 +10,9 @@ export type DocumentAction =
   | { type: 'toggleSelect'; pageId: string }
   | { type: 'invertSelection' }
   | { type: 'setSelectMode'; on: boolean }
+  | { type: 'addOverlay'; pageId: string; overlay: SignatureOverlay }
+  | { type: 'updateOverlay'; pageId: string; overlayId: string; patch: Partial<Omit<SignatureOverlay, 'id' | 'signatureId'>> }
+  | { type: 'removeOverlay'; pageId: string; overlayId: string }
   | { type: 'dismissErrors' }
   | { type: 'reset' }
 
@@ -99,6 +103,41 @@ export function documentReducer(state: DocumentState, action: DocumentAction): D
         selectMode: action.on,
         // 離開勾選模式時清空，避免殘留的勾選影響下一次匯出
         pages: action.on ? state.pages : state.pages.map(p => ({ ...p, selected: false })),
+      }
+
+    case 'addOverlay':
+      return {
+        ...state,
+        pages: state.pages.map(page =>
+          page.id === action.pageId && page.overlays.length < LIMITS.maxOverlaysPerPage
+            ? { ...page, overlays: [...page.overlays, action.overlay] }
+            : page,
+        ),
+      }
+
+    case 'updateOverlay':
+      return {
+        ...state,
+        pages: state.pages.map(page =>
+          page.id === action.pageId
+            ? {
+                ...page,
+                overlays: page.overlays.map(overlay =>
+                  overlay.id === action.overlayId ? { ...overlay, ...action.patch } : overlay,
+                ),
+              }
+            : page,
+        ),
+      }
+
+    case 'removeOverlay':
+      return {
+        ...state,
+        pages: state.pages.map(page =>
+          page.id === action.pageId
+            ? { ...page, overlays: page.overlays.filter(o => o.id !== action.overlayId) }
+            : page,
+        ),
       }
 
     case 'dismissErrors':
