@@ -96,3 +96,19 @@ test('超過 20 頁時擋下並說明原因', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('一次最多只能轉 20 頁為圖片')
   await expect(page.getByRole('heading', { name: '匯出完成' })).toHaveCount(0)
 })
+
+test('轉圖片不會掏空來源位元組，之後仍能匯出 PDF', async ({ page }) => {
+  const dialogs: string[] = []
+  page.on('dialog', d => { dialogs.push(d.message()); d.accept() })
+  await page.goto('./')
+  await page.getByRole('button', { name: /PDF 轉圖片/ }).click()
+  await page.locator('input[accept="application/pdf"]').setInputFiles([fixture('three-pages.pdf')])
+  await page.getByTestId('page-tile').nth(0).click()
+  await page.getByRole('button', { name: /匯出勾選的 \d+ 頁為圖片/ }).click()
+  await expect(page.getByRole('heading', { name: '匯出完成' })).toBeVisible({ timeout: 20_000 })
+  // pdf.js 會把傳入的 buffer 轉移給 worker，沒有 .slice() 的話這裡會失敗
+  await page.getByRole('button', { name: '返回編輯' }).click()
+  await page.getByRole('button', { name: '改成匯出 PDF', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '匯出完成' })).toBeVisible({ timeout: 20_000 })
+  expect(dialogs).toEqual([])
+})

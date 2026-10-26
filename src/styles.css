@@ -300,15 +300,16 @@ body {
 .source-button.active { border-color: var(--accent); color: var(--accent); }
 .text-button.danger { color: var(--danger); }
 
-/* 破壞性動作：與主按鈕隔開、置中、全寬，避免誤觸。
-   上方的 margin 加上 .action-hint 的文字一起當視覺分隔——
-   實測原本刪除鈕與匯出鈕的垂直間距是 0px，而且兩者文案句型幾乎一樣。 */
+/* 破壞性動作要與其他按鈕明確隔開。
+   不能依賴 .action-hint 當分隔——那句提示只在主按鈕是 PDF 時才顯示，
+   而「PDF 轉圖片」工具（唯一預設進勾選模式的）正好沒有它。 */
 .remove-selected {
   display: flex;
   width: 100%;
   justify-content: center;
-  margin: 12px 0 0;
-  padding: 8px 12px;
+  margin: 32px 0 0;
+  padding: 16px 12px 8px;
+  border-top: 1px solid var(--border);
 }
 
 .name-field { display: block; margin-bottom: 16px; }

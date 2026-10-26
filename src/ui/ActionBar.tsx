@@ -83,7 +83,7 @@ export function ActionBar({
         </p>
       )}
       {selectMode && selectedCount > 0 && (
-        <button className="text-button danger remove-selected" onClick={onRemoveSelected}>
+        <button className="text-button danger remove-selected" disabled={busy} onClick={onRemoveSelected}>
           刪除勾選的 {selectedCount} 頁
         </button>
       )}

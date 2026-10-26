@@ -103,28 +103,47 @@ export async function shareFiles(files: ExportedFile[]): Promise<'shared' | 'can
  * 不能直接把來源 blob 當輸出：來源可能是 PNG（命名成 .jpg 會內容與副檔名不符），
  * 而且使用者施加的旋轉完全不會反映出來，與「旋轉後匯出 PDF」的行為不一致。
  */
-export async function renderImageToJpeg(blob: Blob, rotation: Rotation): Promise<Blob> {
+export async function renderImageToJpeg(
+  blob: Blob,
+  rotation: Rotation,
+  targetEdge?: number,
+): Promise<Blob> {
   const bitmap = await createImageBitmap(blob)
   const swap = rotation === 90 || rotation === 270
-  const canvas = document.createElement('canvas')
-  canvas.width = swap ? bitmap.height : bitmap.width
-  canvas.height = swap ? bitmap.width : bitmap.height
-  const context = canvas.getContext('2d')
-  if (!context) {
-    bitmap.close()
-    throw new Error('無法取得 canvas context')
-  }
-  // 白底，否則 PNG 的透明區域在 JPEG 會變成黑色
-  context.fillStyle = '#ffffff'
-  context.fillRect(0, 0, canvas.width, canvas.height)
-  context.translate(canvas.width / 2, canvas.height / 2)
-  context.rotate((rotation * Math.PI) / 180)
-  context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2)
-  bitmap.close()
+  const sourceWidth = swap ? bitmap.height : bitmap.width
+  const sourceHeight = swap ? bitmap.width : bitmap.height
+  // targetEdge 只有批次轉圖片會傳。單張匯出維持原尺寸，不改變既有行為。
+  const scale = targetEdge ? Math.min(1, targetEdge / Math.max(sourceWidth, sourceHeight)) : 1
 
-  const output = await new Promise<Blob | null>(resolve =>
-    canvas.toBlob(resolve, 'image/jpeg', LIMITS.jpegQuality),
-  )
-  if (!output) throw new Error('影像輸出失敗')
-  return output
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale))
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale))
+
+  try {
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('無法取得 canvas context')
+    // 白底，否則 PNG 的透明區域在 JPEG 會變成黑色
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.translate(canvas.width / 2, canvas.height / 2)
+    context.rotate((rotation * Math.PI) / 180)
+    context.drawImage(
+      bitmap,
+      (-bitmap.width * scale) / 2,
+      (-bitmap.height * scale) / 2,
+      bitmap.width * scale,
+      bitmap.height * scale,
+    )
+
+    const output = await new Promise<Blob | null>(resolve =>
+      canvas.toBlob(resolve, 'image/jpeg', LIMITS.jpegQuality),
+    )
+    if (!output) throw new Error('影像輸出失敗')
+    return output
+  } finally {
+    bitmap.close()
+    // 批次路徑會連續呼叫 20 次，不歸零的話 backing store 會堆著等 GC
+    canvas.width = 0
+    canvas.height = 0
+  }
 }

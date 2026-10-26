@@ -29,7 +29,7 @@ export function fitToEdge(
  *
  * **必須序列處理。** 2000px 的 A4 canvas 約 11 MB，20 頁若同時存在就是 220 MB，
  * iOS Safari 會直接回收分頁。所以一次只渲染一頁，toBlob 之後立刻把 canvas
- * 的寬高設成 0 釋放，累積的只有 JPEG 本身（20 頁約 8 MB）。
+ * 的寬高設成 0 釋放，累積的只有 JPEG 本身（實測 20 頁約 16 MB（掃描件）到 47 MB（高解析照片））。
  *
  * 任一頁失敗就整批中止並往上拋。使用者預期拿到「這幾頁的圖片」，
  * 缺幾張比全部失敗更難發現。
@@ -48,7 +48,7 @@ export async function pagesToJpegBlobs({
   try {
     for (const [index, page] of pages.entries()) {
       if (page.source.kind === 'image') {
-        blobs.push(await renderImageToJpeg(page.source.blob, page.rotation))
+        blobs.push(await renderImageToJpeg(page.source.blob, page.rotation, LIMITS.imageExportEdge))
       } else {
         const file = loadedFiles[page.source.fileId]
         if (!file) throw new Error(`找不到來源檔案：${page.source.fileId}`)
@@ -115,5 +115,7 @@ async function renderPdfPage(
     // 立刻釋放，否則 20 頁的 canvas 會同時佔住記憶體
     canvas.width = 0
     canvas.height = 0
+    // worker 裡該頁的解碼影像也要放掉，否則 20 頁會一路累積到整批結束
+    pdfPage.cleanup()
   }
 }

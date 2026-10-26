@@ -15,7 +15,7 @@ export const LIMITS = {
   // 轉圖片的輸出長邊。A4 約 170dpi，對分享用的圖片足夠。
   // 比 maxCaptureEdge 小是因為轉圖片會一次處理多頁，記憶體壓力更大。
   imageExportEdge: 2000,
-  // 一次最多轉幾頁為圖片。依據是「20 頁 JPEG 約 8 MB，加上 iOS 多檔分享的開銷
+  // 一次最多轉幾頁為圖片。依據是「實測 20 頁 JPEG 約 16 MB（掃描件）到 47 MB（高解析照片），加上 iOS 多檔分享的開銷
   // 應該還在安全範圍」——iOS 的多檔分享實際上限未經驗證，已列入真機測試清單。
   maxImageExportPages: 20,
 } as const
