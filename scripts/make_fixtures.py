@@ -48,6 +48,12 @@ with open(os.path.join(FIX, "corrupt.pdf"), "wb") as fh:
 Image.new("RGB", (100, 200), (200, 30, 30)).save(os.path.join(FIX, "portrait.png"))
 Image.new("RGB", (200, 100), (30, 200, 30)).save(os.path.join(FIX, "landscape.jpg"), quality=90)
 
+# 簽名用的素材：寬扁、透明背景、中間一條不透明的「筆跡」
+sig = Image.new("RGBA", (600, 200), (0, 0, 0, 0))
+d = ImageDraw.Draw(sig)
+d.line([(40, 150), (200, 60), (360, 150), (560, 70)], fill=(20, 20, 30, 255), width=12)
+sig.save(os.path.join(FIX, "signature.png"))
+
 # 掃描測試用：淺色背景上一個深色梯形，四角座標固定且已知
 scan = Image.new("RGB", (400, 300), (235, 235, 235))
 draw = ImageDraw.Draw(scan)

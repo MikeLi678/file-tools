@@ -41,7 +41,11 @@ export function detectImageType(bytes: Uint8Array): 'jpeg' | 'png' | 'unknown' {
   return 'unknown'
 }
 
-export async function appendImagePage(doc: PDFDocument, bytes: Uint8Array, rotation: Rotation): Promise<void> {
+export async function appendImagePage(
+  doc: PDFDocument,
+  bytes: Uint8Array,
+  rotation: Rotation,
+): Promise<A4Placement> {
   const type = detectImageType(bytes)
   if (type === 'unknown') throw new Error('無法辨識的影像格式')
 
@@ -55,4 +59,5 @@ export async function appendImagePage(doc: PDFDocument, bytes: Uint8Array, rotat
     height: placement.height,
   })
   page.setRotation(degrees(((rotation % 360) + 360) % 360))
+  return placement
 }

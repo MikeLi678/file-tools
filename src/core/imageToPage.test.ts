@@ -80,3 +80,21 @@ describe('appendImagePage', () => {
     await expect(appendImagePage(doc, new Uint8Array([9, 9, 9]), 0)).rejects.toThrow('無法辨識的影像格式')
   })
 })
+
+it('appendImagePage 回傳影像在 A4 上的實際位置', async () => {
+  const doc = await PDFDocument.create()
+  // portrait.png 是 100x200 → 直向 A4，受限於高度，等比放大 4.2094 倍
+  const placement = await appendImagePage(doc, fixture('portrait.png'), 0)
+  expect(placement.pageWidth).toBeCloseTo(A4_SHORT, 2)
+  expect(placement.pageHeight).toBeCloseTo(A4_LONG, 2)
+  expect(placement.width).toBeCloseTo(420.945, 2)
+  expect(placement.height).toBeCloseTo(A4_LONG, 2)
+  expect(placement.x).toBeCloseTo(87.1675, 2)
+  expect(placement.y).toBeCloseTo(0, 2)
+})
+
+it('appendImagePage 的 placement 與 fitOnA4 一致', async () => {
+  const doc = await PDFDocument.create()
+  const placement = await appendImagePage(doc, fixture('landscape.jpg'), 0)
+  expect(placement).toEqual(fitOnA4(200, 100))
+})

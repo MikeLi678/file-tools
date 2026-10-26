@@ -66,7 +66,7 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
         onExported([{ blob, fileName: outputFileName(new Date(), 'jpg'), pageCount: 1 }])
         return
       }
-      const bytes = await exportToPdf({ pages, loadedFiles: state.loadedFiles })
+      const bytes = await exportToPdf({ pages, loadedFiles: state.loadedFiles, signatures: {} })
       // pdf-lib 的 save() 實際回傳一般 ArrayBuffer，但型別標成 ArrayBufferLike
       // （理論上可能是 SharedArrayBuffer），直接傳給 Blob 會型別不符。
       // 用斷言而不是 new Uint8Array(bytes)，後者會把整份 PDF 再複製一次。
