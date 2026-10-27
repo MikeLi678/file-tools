@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CropOverlay } from './CropOverlay'
 import { captureFrame, defaultQuad, openRearCamera, rasterToJpegBlob } from '../core/scanner/camera'
 import { estimateOutputSize, warpPerspective, type Quad } from '../core/scanner/geometry'
+import { detectDocumentQuad } from '../core/scanner/detect'
 import { FILTER_LABELS, applyFilter, type FilterMode } from '../core/scanner/filters'
 import type { RasterImage } from '../types'
 
@@ -14,7 +15,7 @@ type Stage =
   | { name: 'opening' }
   | { name: 'denied' | 'unavailable' }
   | { name: 'preview' }
-  | { name: 'crop'; frame: RasterImage; quad: Quad; filter: FilterMode }
+  | { name: 'crop'; frame: RasterImage; quad: Quad; filter: FilterMode; detected: boolean }
 
 export function ScannerView({ onCaptured, onCancel }: Props) {
   const [stage, setStage] = useState<Stage>({ name: 'opening' })
@@ -87,7 +88,21 @@ export function ScannerView({ onCaptured, onCancel }: Props) {
     if (!videoRef.current) return
     try {
       const frame = captureFrame(videoRef.current)
-      setStage({ name: 'crop', frame, quad: defaultQuad(frame.width, frame.height), filter: 'enhance' })
+      // 偵測失敗不該讓整個掃描流程中斷，所以包在 try 裡。
+      // 偵測不到就退回內縮 10% 的預設框，並讓使用者知道那是預設值——
+      // 否則他可能以為那就是偵測結果而直接按下一步，裁到錯的範圍。
+      let quad = defaultQuad(frame.width, frame.height)
+      let detected = false
+      try {
+        const found = detectDocumentQuad(frame)
+        if (found) {
+          quad = found
+          detected = true
+        }
+      } catch {
+        // 保持 detected = false，走預設框
+      }
+      setStage({ name: 'crop', frame, quad, filter: 'enhance', detected })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '擷取失敗')
     }
@@ -138,6 +153,12 @@ export function ScannerView({ onCaptured, onCancel }: Props) {
           </button>
           <h1>調整範圍</h1>
         </header>
+
+        {!stage.detected && (
+          <p className="action-hint" role="status" data-testid="detect-fallback">
+            沒有抓到文件邊界，下面是預設的裁切框。請拖四個角對準文件。
+          </p>
+        )}
 
         <div className="crop-stage">
           <CropOverlay
