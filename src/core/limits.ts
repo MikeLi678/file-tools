@@ -30,6 +30,20 @@ export const LIMITS = {
   signatureCaptureEdge: 1200,
   // IndexedDB 的防爆護欄。1200px 的透明 PNG 遠低於此
   maxSignatureBytes: 2 * 1024 * 1024,
+  // 邊緣偵測的工作解析度長邊。maxCaptureEdge 是 2400，在那個尺寸上跑
+  // Sobel 與 Hough 太慢；降到 320px 之後約 7.7 萬像素，原型實測全流程 12-31ms。
+  // 座標最後乘回原始尺寸，一格對應原圖 3-7px，而使用者本來就要微調，足夠。
+  detectWorkEdge: 320,
+  // 取梯度最強的前 8% 當邊緣點。用百分位而非固定門檻，所以會自動適應對比
+  detectEdgePercentile: 0.08,
+  // 偵測前的 box blur 半徑，用來壓感光雜訊
+  detectBlurRadius: 2,
+  // Hough 的 theta 格數，即 1 度一格
+  detectThetaSteps: 180,
+  // 取前 40 條峰值。原型實測文件四邊分數 5-6 萬、雜訊約 4 千，40 條綽綽有餘
+  detectMaxLines: 40,
+  // 裁切時放大鏡的倍率
+  magnifierScale: 3,
 } as const
 
 export type IncomingFile = {

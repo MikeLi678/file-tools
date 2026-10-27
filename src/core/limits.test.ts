@@ -102,3 +102,18 @@ it('簽名擷取的長邊小於掃描影格的上限', () => {
   // 簽名是線條不是照片，不需要跟掃描件一樣的解析度
   expect(LIMITS.signatureCaptureEdge).toBeLessThan(LIMITS.maxCaptureEdge)
 })
+
+it('偵測相關的上限都合理', () => {
+  expect(LIMITS.detectWorkEdge).toBeGreaterThan(0)
+  expect(LIMITS.detectEdgePercentile).toBeGreaterThan(0)
+  expect(LIMITS.detectEdgePercentile).toBeLessThan(1)
+  expect(LIMITS.detectBlurRadius).toBeGreaterThanOrEqual(1)
+  expect(LIMITS.detectThetaSteps).toBeGreaterThanOrEqual(90)
+  expect(LIMITS.detectMaxLines).toBeGreaterThanOrEqual(8)
+  expect(LIMITS.magnifierScale).toBeGreaterThan(1)
+})
+
+it('偵測的工作解析度遠小於擷取影格的上限', () => {
+  // 2400px 的原尺寸跑 Sobel 與 Hough 太慢，降到 320px 實測 12-31ms
+  expect(LIMITS.detectWorkEdge).toBeLessThan(LIMITS.maxCaptureEdge / 4)
+})

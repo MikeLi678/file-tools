@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyHomography, estimateOutputSize, solveHomography, warpPerspective } from './geometry'
+import { applyHomography, estimateOutputSize, isConvexQuad, quadAngles, quadArea, solveHomography, warpPerspective } from './geometry'
 import type { Quad } from './geometry'
 import type { RasterImage } from '../../types'
 
@@ -116,5 +116,67 @@ describe('warpPerspective', () => {
     for (let i = 3; i < out.data.length; i += 4) {
       expect(out.data[i]).toBe(255)
     }
+  })
+})
+
+describe('quadArea', () => {
+  it('單位正方形的面積是 1', () => {
+    expect(quadArea([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }])).toBeCloseTo(1, 10)
+  })
+
+  it('矩形', () => {
+    expect(quadArea([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 }])).toBeCloseTo(12, 10)
+  })
+
+  it('梯形', () => {
+    // 上底 2、下底 4、高 3 → (2+4)*3/2 = 9
+    expect(quadArea([{ x: 1, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 }])).toBeCloseTo(9, 10)
+  })
+
+  it('點序反向時面積仍為正', () => {
+    expect(quadArea([{ x: 0, y: 1 }, { x: 1, y: 1 }, { x: 1, y: 0 }, { x: 0, y: 0 }])).toBeCloseTo(1, 10)
+  })
+})
+
+describe('isConvexQuad', () => {
+  it('正方形是凸的', () => {
+    expect(isConvexQuad([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }])).toBe(true)
+  })
+
+  it('梯形是凸的', () => {
+    expect(isConvexQuad([{ x: 1, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 }])).toBe(true)
+  })
+
+  it('自交的「蝴蝶形」不是凸的', () => {
+    expect(isConvexQuad([{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 1, y: 0 }, { x: 0, y: 1 }])).toBe(false)
+  })
+
+  it('凹四邊形不是凸的', () => {
+    expect(isConvexQuad([{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }])).toBe(false)
+  })
+
+  it('三點共線視為不是凸的', () => {
+    expect(isConvexQuad([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 1 }])).toBe(false)
+  })
+})
+
+describe('quadAngles', () => {
+  it('正方形的四個內角都是 90 度', () => {
+    const angles = quadAngles([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }])
+    expect(angles).toHaveLength(4)
+    for (const a of angles) expect(a).toBeCloseTo(90, 6)
+  })
+
+  it('內角和是 360 度', () => {
+    const angles = quadAngles([{ x: 1, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 }])
+    expect(angles.reduce((a, b) => a + b)).toBeCloseTo(360, 6)
+  })
+
+  it('很扁的四邊形會有極端內角', () => {
+    const angles = quadAngles([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 0.5 }, { x: 0, y: 0.5 }])
+    // 仍是矩形所以都是 90 度，但換成歪斜的就會出現小角
+    const skewed = quadAngles([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 12, y: 1 }, { x: 0, y: 1 }])
+    expect(Math.min(...angles)).toBeCloseTo(90, 6)
+    expect(Math.min(...skewed)).toBeLessThan(70)
   })
 })

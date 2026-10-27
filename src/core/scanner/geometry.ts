@@ -6,6 +6,54 @@ export type Quad = [Point, Point, Point, Point]
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 
+/** 四邊形面積，用鞋帶公式。點序順逆時針都回傳正值 */
+export function quadArea(quad: Quad): number {
+  let sum = 0
+  for (let i = 0; i < 4; i++) {
+    const p = quad[i]
+    const n = quad[(i + 1) % 4]
+    sum += p.x * n.y - n.x * p.y
+  }
+  return Math.abs(sum) / 2
+}
+
+/**
+ * 四個相鄰邊的外積是否同號。同號表示凸四邊形。
+ * 外積為 0（三點共線）視為不是凸的——退化的四邊形對裁切沒有意義。
+ */
+export function isConvexQuad(quad: Quad): boolean {
+  let sign = 0
+  for (let i = 0; i < 4; i++) {
+    const a = quad[i]
+    const b = quad[(i + 1) % 4]
+    const c = quad[(i + 2) % 4]
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+    if (cross === 0) return false
+    const s = Math.sign(cross)
+    if (sign === 0) sign = s
+    else if (s !== sign) return false
+  }
+  return true
+}
+
+/** 四個內角，單位是度，順序與 quad 相同 */
+export function quadAngles(quad: Quad): [number, number, number, number] {
+  const angleAt = (prev: Point, at: Point, next: Point): number => {
+    const v1 = { x: prev.x - at.x, y: prev.y - at.y }
+    const v2 = { x: next.x - at.x, y: next.y - at.y }
+    const len = Math.hypot(v1.x, v1.y) * Math.hypot(v2.x, v2.y)
+    if (len === 0) return 0
+    const cos = (v1.x * v2.x + v1.y * v2.y) / len
+    return (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI
+  }
+  return [
+    angleAt(quad[3], quad[0], quad[1]),
+    angleAt(quad[0], quad[1], quad[2]),
+    angleAt(quad[1], quad[2], quad[3]),
+    angleAt(quad[2], quad[3], quad[0]),
+  ]
+}
+
 export function estimateOutputSize(quad: Quad): { width: number; height: number } {
   const [tl, tr, br, bl] = quad
   const width = Math.max(distance(tl, tr), distance(bl, br))
