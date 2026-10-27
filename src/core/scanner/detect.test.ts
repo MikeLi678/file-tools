@@ -295,8 +295,14 @@ describe('validateQuad', () => {
   })
 
   it('內角過於極端不通過', () => {
-    const skewed: Quad = [{ x: 10, y: 50 }, { x: 90, y: 48 }, { x: 95, y: 52 }, { x: 12, y: 54 }]
-    expect(validateQuad(skewed, 100, 100).ok).toBe(false)
+    // 這個 quad 的面積比是 0.225、凸、完全在畫面內，**只有內角（167 度）不合格**，
+    // 所以它唯一的守門人就是角度規則。
+    // 原本用的 [(10,50),(90,48),(95,52),(12,54)] 面積比只有 0.033，
+    // 放寬角度門檻後會改由面積規則擋下，這條測試就守不住角度了。
+    const skewed: Quad = [{ x: 5, y: 50 }, { x: 50, y: 45 }, { x: 95, y: 50 }, { x: 50, y: 95 }]
+    const r = validateQuad(skewed, 100, 100)
+    expect(r.ok).toBe(false)
+    expect(r.ok === false && r.why).toContain('內角')
   })
 
   it('面積過小不通過', () => {

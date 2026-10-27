@@ -107,7 +107,10 @@ test('放大鏡在與被拖曳角點相反的垂直半邊', async ({ page, conte
   await page.mouse.move(tlBox.x + tlBox.width / 2, tlBox.y + tlBox.height / 2)
   await page.mouse.down()
   await page.mouse.move(tlBox.x + tlBox.width / 2 + 10, tlBox.y + tlBox.height / 2 + 10, { steps: 3 })
-  const magBox = (await page.getByTestId('crop-magnifier').boundingBox())!
+  // 要量「可見的放大鏡框」。<g> 的 boundingBox 不吃 clipPath，會把裡面
+  // 3 倍放大的全尺寸 <image> 一起算進去，兩種位置都會算出同一個外接盒，
+  // 位置斷言就變成恆真（實測正確與錯誤版本的 <g> 高度都是 641.2）。
+  const magBox = (await page.locator('.magnifier-frame').boundingBox())!
   expect(magBox.y + magBox.height / 2).toBeGreaterThan(oBox.y + oBox.height / 2)
   await page.mouse.up()
 })
