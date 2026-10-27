@@ -1,5 +1,6 @@
 """產生測試素材與 PWA icon。重複執行會覆蓋，結果不進 git。"""
 import os
+import zlib
 import random
 from pypdf import PdfWriter
 from PIL import Image, ImageDraw, ImageFilter
@@ -101,7 +102,9 @@ def _paper(draw, quad):
 def _scan_case(name, bg, quad, clutter=0, size=(900, 1200)):
     im = Image.new("RGB", size, bg)
     d = ImageDraw.Draw(im)
-    rnd = random.Random(hash(name) & 0xFFFF)
+    # 不能用 hash(name)：Python 的字串 hash 每個 process 都會隨機化，
+    # 素材每次產生都不同，準確度測試就不可重現了
+    rnd = random.Random(zlib.crc32(name.encode()))
     for _ in range(clutter):
         x, y = rnd.randint(0, size[0]), rnd.randint(0, size[1])
         w, h = rnd.randint(40, 220), rnd.randint(40, 220)
