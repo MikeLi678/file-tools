@@ -1,7 +1,8 @@
 """產生測試素材與 PWA icon。重複執行會覆蓋，結果不進 git。"""
 import os
+import random
 from pypdf import PdfWriter
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures")
@@ -78,3 +79,53 @@ for size in (192, 512):
 
 print("fixtures written to", FIX)
 print("icons written to", PUB)
+
+
+# ---- 掃描偵測用的合成照片 ----
+# 真值四角寫進檔名旁的 JSON，測試直接讀，不要在兩邊各寫一份座標
+import json as _json
+
+def _paper(draw, quad):
+    """畫一張有內文的紙"""
+    draw.polygon(quad, fill=(246, 244, 238))
+    xs = [p[0] for p in quad]
+    ys = [p[1] for p in quad]
+    x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+    for i in range(12):
+        y = y0 + (y1 - y0) * (0.12 + 0.065 * i)
+        if y > y1 - 20:
+            break
+        w = (x1 - x0) * (0.45 + 0.37 * ((i * 7) % 10) / 10)
+        draw.line([(x0 + (x1 - x0) * 0.1, y), (x0 + (x1 - x0) * 0.1 + w, y)], fill=(70, 70, 75), width=3)
+
+def _scan_case(name, bg, quad, clutter=0, size=(900, 1200)):
+    im = Image.new("RGB", size, bg)
+    d = ImageDraw.Draw(im)
+    rnd = random.Random(hash(name) & 0xFFFF)
+    for _ in range(clutter):
+        x, y = rnd.randint(0, size[0]), rnd.randint(0, size[1])
+        w, h = rnd.randint(40, 220), rnd.randint(40, 220)
+        d.rectangle([x, y, x + w, y + h], fill=tuple(rnd.randint(20, 210) for _ in range(3)))
+    _paper(d, quad)
+    blurred = im.filter(ImageFilter.GaussianBlur(1.2))
+    # PNG 留給人眼檢查，.rgba 才是測試讀的——Node 環境沒有影像解碼器
+    blurred.save(os.path.join(FIX, f"scan-{name}.png"))
+    with open(os.path.join(FIX, f"scan-{name}.rgba"), "wb") as fh:
+        fh.write(blurred.convert("RGBA").tobytes())
+    return {"name": name, "quad": [list(p) for p in quad], "width": size[0], "height": size[1]}
+
+_scan_cases = [
+    # 應該偵測成功
+    _scan_case("plain", (52, 48, 44), [(150, 220), (750, 220), (750, 980), (150, 980)]),
+    _scan_case("rotated", (48, 52, 56), [(170, 250), (760, 180), (830, 930), (240, 1000)]),
+    _scan_case("perspective", (40, 44, 40), [(260, 190), (680, 210), (790, 980), (120, 950)]),
+    _scan_case("clutter", (60, 60, 64), [(160, 240), (740, 230), (760, 960), (150, 970)], clutter=14),
+    _scan_case("full", (30, 30, 34), [(40, 60), (860, 50), (870, 1150), (30, 1140)]),
+    # 應該退回預設（淺紙放在淺色桌面，紙與桌面只差十幾個灰階）
+    _scan_case("lowcontrast", (228, 226, 220), [(160, 240), (740, 230), (760, 960), (150, 970)]),
+    # 應該退回預設（文件偏到角落、被畫面切掉）
+    _scan_case("offcenter", (45, 42, 40), [(60, 90), (430, 100), (440, 560), (50, 550)]),
+    _scan_case("cropped", (38, 40, 44), [(-120, 180), (700, 150), (760, 940), (-80, 980)]),
+]
+with open(os.path.join(FIX, "scan-cases.json"), "w") as fh:
+    _json.dump(_scan_cases, fh)
