@@ -91,7 +91,7 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - [ ] 從相簿選取 HEIC 照片能正常轉成 PDF
 - [ ] 掃描時相機是後鏡頭
 - [ ] 掃描三頁再加一份既有 PDF 合併，一趟流程完成，不需要匯出中間檔
-- [ ] VoiceOver 能單獨聚焦縮圖上的「旋轉」與「刪除」按鈕（根 div 帶著 dnd-kit 的 `role="button"`，裡面放真 button 是巢狀互動元素，螢幕閱讀器的行為只能真機驗）
+- [ ] VoiceOver 能單獨聚焦縮圖上的「簽名」、「旋轉」與「刪除」按鈕（根 div 帶著 dnd-kit 的 `role="button"`，裡面放真 button 是巢狀互動元素，螢幕閱讀器的行為只能真機驗）
 - [ ] 長按拖曳排序在觸控下正常，且不與頁面捲動衝突（自動化只測得到滑鼠拖曳）
 - [ ] `navigator.share` 不可用時，`a[download]` 的退路在 standalone 模式下會不會變成在 app 內開啟預覽而無法返回
 - [ ] 大檔下載時，iOS 的確認框若停留超過 60 秒，blob URL 是否已失效

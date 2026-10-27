@@ -178,11 +178,14 @@ body {
 
 .tile-actions {
   display: flex;
+  flex-wrap: wrap;
   border-top: 1px solid var(--border);
 }
 
+/* 三顆按鈕在窄螢幕排不下 44pt，讓它換行而不是一起縮到 28px。
+   最窄的那顆是不可逆的刪除，縮小命中區的代價最高。 */
 .tile-button {
-  flex: 1;
+  flex: 1 1 44px;
   background: none;
   border: none;
   border-right: 1px solid var(--border);
@@ -192,6 +195,8 @@ body {
   font-size: 12px;
   color: var(--accent);
   cursor: pointer;
+  /* 換行後第二排的上緣沒有分隔線，用 box-shadow 補上（第一排與容器上框線重疊，看不出差別） */
+  box-shadow: 0 -1px 0 var(--border);
 }
 
 .tile-button:last-child { border-right: none; }
@@ -410,17 +415,14 @@ body {
 /* 舞台的長寬比是「顯示後」的，頁面本身是「未旋轉」的，兩者在 90/270 時互換 */
 .placer-stage {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100%;
   background: var(--bg);
 }
 
 .placer-page {
-  position: relative;
-  width: 100%;
-  max-height: 100%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   background: #ffffff;
   touch-action: none;
 }

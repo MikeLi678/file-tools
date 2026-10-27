@@ -9,6 +9,9 @@ export const LIMITS = {
   maxTotalBytes: 80 * 1024 * 1024,
   thumbnailWidth: 200,
   thumbnailMaxScale: 2,
+  // 定位畫面的頁面預覽寬度。刻意不重用 signatureCaptureEdge：兩者只是巧合同值，
+  // 一個是預覽寬、一個是簽名裁切長邊，日後改其中一邊不該連動另一邊。
+  placerPreviewWidth: 1200,
   thumbnailConcurrency: 3,
   jpegQuality: 0.85,
   maxCaptureEdge: 2400,

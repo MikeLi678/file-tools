@@ -66,7 +66,7 @@ export function PageGrid({ pages, loadedFiles, thumbnailer, onMove, onSign, onRo
               loadedFiles={loadedFiles}
               thumbnailer={thumbnailer}
               onSign={onSign}
-      onRotate={onRotate}
+              onRotate={onRotate}
               onRemove={onRemove}
               selectMode={selectMode}
               onToggleSelect={onToggleSelect}

@@ -190,9 +190,14 @@ export function Editor({ tool, state, dispatch, thumbnailer, onBack, onCamera, o
         <SignatureCapture
           onCancel={() => setSignFlow({ step: 'library', pageId: signFlow.pageId })}
           onSaved={async signature => {
-            await store?.save(signature)
-            await refreshSignatures()
-            if (mounted.current) setSignFlow({ step: 'place', pageId: signFlow.pageId, signature })
+            try {
+              await store?.save(signature)
+              await refreshSignatures()
+              if (mounted.current) setSignFlow({ step: 'place', pageId: signFlow.pageId, signature })
+            } catch (error) {
+              // 例如 IndexedDB 配額已滿。留在手寫畫布，讓使用者知道沒存成
+              window.alert(error instanceof Error ? `簽名儲存失敗：${error.message}` : '簽名儲存失敗')
+            }
           }}
         />
       )

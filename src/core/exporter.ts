@@ -37,13 +37,10 @@ export async function exportToPdf({ pages, loadedFiles, signatures }: ExportInpu
     return doc
   }
 
-  const getSignature = async (id: string): Promise<PDFImage | null> => {
+  const getSignature = async (id: string, bytes: Uint8Array): Promise<PDFImage> => {
     const cached = embedded.get(id)
     if (cached) return cached
-    const asset = signatures[id]
-    // 找不到就跳過這個覆蓋層，不讓整份匯出失敗
-    if (!asset) return null
-    const image = await out.embedPng(asset.bytes)
+    const image = await out.embedPng(bytes)
     embedded.set(id, image)
     return image
   }
@@ -51,9 +48,9 @@ export async function exportToPdf({ pages, loadedFiles, signatures }: ExportInpu
   const drawOverlays = async (target: PDFPage, box: PdfBox, overlays: SignatureOverlay[]) => {
     for (const overlay of overlays) {
       const asset = signatures[overlay.signatureId]
+      // 找不到就跳過這個覆蓋層，不讓整份匯出失敗
       if (!asset) continue
-      const image = await getSignature(overlay.signatureId)
-      if (!image) continue
+      const image = await getSignature(overlay.signatureId, asset.bytes)
       // 覆蓋層存的是未旋轉座標，pdf-lib 的使用者空間也不受 /Rotate 影響，
       // 兩者是同一個空間，所以這裡不需要任何旋轉變換。
       const rect = normalizedToPdfRect(overlay, box, asset.height / asset.width)

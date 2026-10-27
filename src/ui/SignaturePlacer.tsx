@@ -42,6 +42,7 @@ export function SignaturePlacer({
   const boxRef = useRef<HTMLDivElement | null>(null)
   const grabRef = useRef<{ dx: number; dy: number } | null>(null)
   const modeRef = useRef<'move' | 'resize' | null>(null)
+  const placedRef = useRef(false)
 
   // 渲染頁面圖。PDF 頁一律用 rotation: 0 渲染，得到使用者空間的樣子，
   // 旋轉交給外層的 CSS transform，這樣覆蓋層的座標才能是直接的百分比。
@@ -70,7 +71,7 @@ export function SignaturePlacer({
         const pdfPage = await doc.getPage(page.source.pageIndex + 1)
         // rotation: 0 取代頁面自身的 /Rotate，得到未旋轉的使用者空間
         const base = pdfPage.getViewport({ scale: 1, rotation: 0 })
-        const scale = Math.min(2, 1200 / base.width)
+        const scale = Math.min(LIMITS.thumbnailMaxScale, LIMITS.placerPreviewWidth / base.width)
         const viewport = pdfPage.getViewport({ scale, rotation: 0 })
         const canvas = document.createElement('canvas')
         canvas.width = Math.round(viewport.width)
@@ -105,7 +106,11 @@ export function SignaturePlacer({
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [page, loadedFiles])
+    // deps 不能用整個 page：reducer 每次 updateOverlay 都回傳新的 page 物件，
+    // 而拖曳的每個 pointermove 都會 dispatch 一次，於是每個指標事件都重渲染
+    // 整張頁面圖（一份來源位元組副本加一張 8 MB canvas）。實測一次拖曳會有
+    // 7 個渲染同時在飛，約 190 MB 瞬時配置，在 iOS 上足以讓分頁被回收。
+  }, [page.id, page.source, page.rotation, loadedFiles])
 
   // 每個用到的簽名都要一個 object URL
   useEffect(() => {
@@ -122,7 +127,11 @@ export function SignaturePlacer({
   // 從簽名庫挑一個簽名進來，就在預設位置放一個新的覆蓋層。
   // 要調整既有的覆蓋層，是在這個畫面上點它來切換，不是靠這裡。
   // 達到每頁上限時不再新增，改為選取最後一個讓使用者還能調整或刪除。
+  // 要等頁面圖算出真正的長寬比（pageUrl 就緒）才放，否則預設位置會用初始的
+  // aspect = 1 夾限；placedRef 確保整個掛載期間只放一次，不會隨 aspect 變化重複新增。
   useEffect(() => {
+    if (!pageUrl || placedRef.current) return
+    placedRef.current = true
     if (page.overlays.length >= LIMITS.maxOverlaysPerPage) {
       setActiveId(page.overlays[page.overlays.length - 1]?.id ?? null)
       return
@@ -132,9 +141,9 @@ export function SignaturePlacer({
     const overlay = { id: newId(), signatureId: signature.id, ...box }
     onAdd(overlay)
     setActiveId(overlay.id)
-    // 只在掛載時跑一次：之後的新增由使用者再次進入這個畫面觸發
+    // 只放一次：之後的新增由使用者再次進入這個畫面觸發
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [pageUrl])
 
   /** 指標位置 → 未旋轉空間的正規化座標 */
   const pointerToUnrotated = (clientX: number, clientY: number): NormalizedPoint | null => {
@@ -218,7 +227,10 @@ export function SignaturePlacer({
           className="placer-page"
           style={{
             aspectRatio: `1 / ${aspect}`,
-            transform: `rotate(${effective}deg)`,
+            // 旋轉 90/270 後外接盒的長寬互換。寬度取 stage 寬的 displayAspect 倍，
+            // 旋轉後的外接盒才剛好等於 stage，不會溢出視窗。
+            width: swap ? `${100 * displayAspect}%` : '100%',
+            transform: `translate(-50%, -50%) rotate(${effective}deg)`,
           }}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
