@@ -1,4 +1,5 @@
 import type { RasterImage } from '../../types'
+import { boxMean } from './boxMean'
 
 export type FilterMode = 'original' | 'enhance' | 'mono'
 
@@ -97,38 +98,4 @@ function mono(img: RasterImage): RasterImage {
   }
 
   return { width, height, data }
-}
-
-/** 用積分影像算盒狀平均，複雜度與半徑無關 */
-function boxMean(values: Uint8ClampedArray, width: number, height: number, radius: number): Float32Array {
-  const stride = width + 1
-  const integral = new Float64Array(stride * (height + 1))
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      integral[(y + 1) * stride + (x + 1)] =
-        values[y * width + x] +
-        integral[y * stride + (x + 1)] +
-        integral[(y + 1) * stride + x] -
-        integral[y * stride + x]
-    }
-  }
-
-  const out = new Float32Array(width * height)
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const x0 = Math.max(0, x - radius)
-      const y0 = Math.max(0, y - radius)
-      const x1 = Math.min(width - 1, x + radius)
-      const y1 = Math.min(height - 1, y + radius)
-      const sum =
-        integral[(y1 + 1) * stride + (x1 + 1)] -
-        integral[y0 * stride + (x1 + 1)] -
-        integral[(y1 + 1) * stride + x0] +
-        integral[y0 * stride + x0]
-      out[y * width + x] = sum / ((x1 - x0 + 1) * (y1 - y0 + 1))
-    }
-  }
-
-  return out
 }
