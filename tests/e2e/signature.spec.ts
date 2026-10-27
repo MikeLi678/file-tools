@@ -30,16 +30,20 @@ async function signNew(page: Page, index = 0) {
   await page.getByRole('button', { name: '簽一個新的' }).click()
   await drawSignature(page)
   await page.getByRole('button', { name: '儲存簽名' }).click()
-  // 覆蓋層在頁面圖就緒後才放，等到有被選取的那個才算進入定位畫面
+  // 覆蓋層在掛載就出現，但頁面圖是非同步的。拖曳要等頁面圖，
+  // 否則 .placer-page 還是初始長寬比，座標換算會用錯的矩形。
   await page.locator('.placer-overlay.active').waitFor()
+  await page.locator('.placer-image').waitFor()
 }
 
 /** 對第 index 頁蓋簽名庫裡的第一個簽名，停在定位畫面 */
 async function signWithSaved(page: Page, index = 0) {
   await page.getByTestId('sign').nth(index).click()
   await page.locator('.signature-pick').first().click()
-  // 覆蓋層在頁面圖就緒後才放，等到有被選取的那個才算進入定位畫面
+  // 覆蓋層在掛載就出現，但頁面圖是非同步的。拖曳要等頁面圖，
+  // 否則 .placer-page 還是初始長寬比，座標換算會用錯的矩形。
   await page.locator('.placer-overlay.active').waitFor()
+  await page.locator('.placer-image').waitFor()
 }
 
 const done = (page: Page) => page.getByRole('button', { name: '完成' }).last().click()

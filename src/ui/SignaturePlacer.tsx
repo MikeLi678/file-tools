@@ -42,7 +42,9 @@ export function SignaturePlacer({
   const boxRef = useRef<HTMLDivElement | null>(null)
   const grabRef = useRef<{ dx: number; dy: number } | null>(null)
   const modeRef = useRef<'move' | 'resize' | null>(null)
-  const placedRef = useRef(false)
+  // 掛載時放下的那個覆蓋層的 id。等頁面圖算出真正的長寬比後要用它重新夾限一次；
+  // 使用者一旦自己動過就清掉，不要覆寫他拖好的位置。
+  const placedRef = useRef<string | null>(null)
 
   // 渲染頁面圖。PDF 頁一律用 rotation: 0 渲染，得到使用者空間的樣子，
   // 旋轉交給外層的 CSS transform，這樣覆蓋層的座標才能是直接的百分比。
@@ -127,11 +129,12 @@ export function SignaturePlacer({
   // 從簽名庫挑一個簽名進來，就在預設位置放一個新的覆蓋層。
   // 要調整既有的覆蓋層，是在這個畫面上點它來切換，不是靠這裡。
   // 達到每頁上限時不再新增，改為選取最後一個讓使用者還能調整或刪除。
-  // 要等頁面圖算出真正的長寬比（pageUrl 就緒）才放，否則預設位置會用初始的
-  // aspect = 1 夾限；placedRef 確保整個掛載期間只放一次，不會隨 aspect 變化重複新增。
+  //
+  // 掛載就放，不等頁面圖。等 pageUrl 的話，渲染失敗時它永遠是 null，
+  // 使用者會進到一個什麼都沒有的定位畫面、簽名無聲消失。
+  // 此時 aspect 還是初始值 1，夾限可能不準，所以下面那個 effect 會在
+  // 真正的長寬比算出後重新夾限一次。
   useEffect(() => {
-    if (!pageUrl || placedRef.current) return
-    placedRef.current = true
     if (page.overlays.length >= LIMITS.maxOverlaysPerPage) {
       setActiveId(page.overlays[page.overlays.length - 1]?.id ?? null)
       return
@@ -141,7 +144,20 @@ export function SignaturePlacer({
     const overlay = { id: newId(), signatureId: signature.id, ...box }
     onAdd(overlay)
     setActiveId(overlay.id)
+    placedRef.current = overlay.id
     // 只放一次：之後的新增由使用者再次進入這個畫面觸發
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 頁面圖算出真正的長寬比之後，把剛放下的那一個重新夾限一次。
+  // 只動自己放的那一個；使用者已經拖過的話 placedRef 已被清掉，不會被覆寫。
+  useEffect(() => {
+    const placedId = placedRef.current
+    if (!placedId || !pageUrl) return
+    placedRef.current = null
+    const aspectOf = signature.height / signature.width
+    const box = clampOverlayBox({ x: (1 - DEFAULT_WIDTH) / 2, y: DEFAULT_Y, width: DEFAULT_WIDTH }, aspectOf, aspect)
+    onUpdate(placedId, { x: box.x, y: box.y, width: box.width })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageUrl])
 
@@ -163,8 +179,13 @@ export function SignaturePlacer({
     overlay: SignatureOverlay,
     mode: 'move' | 'resize',
   ) => {
+    // 頁面圖還沒到時 .placer-page 用的是初始長寬比，拖曳會以錯的矩形換算座標。
+    // 覆蓋層刻意在掛載就顯示（讓使用者立刻看到簽名在哪），但拖曳要等頁面圖。
+    if (!pageUrl) return
     event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
+    // 使用者開始自己操作了，取消「頁面圖就緒後重新夾限」，否則會覆寫他拖好的位置
+    placedRef.current = null
     setActiveId(overlay.id)
     modeRef.current = mode
     const point = pointerToUnrotated(event.clientX, event.clientY)
