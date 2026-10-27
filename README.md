@@ -2,6 +2,11 @@
 
 手機瀏覽器用的 PWA。合併 PDF、圖片轉 PDF、相機掃描、分割抽頁，全部在裝置本機完成，檔案不會上傳到任何伺服器。
 
+v1.3 新增：
+
+- 相機掃描拍完後自動偵測文件邊界，裁切框直接貼合文件；偵測失敗會提示並退回預設框
+- 拖曳裁切四角時出現放大鏡，看得清楚角點對到哪裡
+
 v1.2 新增：
 
 - 簽署文件：手寫簽名蓋到 PDF 或影像頁上，簽名存在裝置上可重複使用
@@ -51,6 +56,8 @@ python3 scripts/make_fixtures.py     # tests/fixtures/ 被 .gitignore 排除，�
 - `src/core/exporter.ts` — 唯一寫 PDF 的地方
 - `src/core/scanner/geometry.ts` — 透視校正，純函式
 - `src/core/scanner/filters.ts` — 影像增強，純函式
+- `src/core/scanner/detect.ts` — 文件邊界自動偵測，純函式的 Hough 偵測管線
+- `src/core/scanner/boxMean.ts` — 從 filters 抽出來的共用積分圖
 - `src/core/pdfjs.ts` — pdf.js 的 worker 只能設定一次，這裡集中設定；是 thumbnailer 與 pageToImage 唯一真正共用的東西
 - `src/core/signature/geometry.ts` — 座標轉換，整個簽名功能的地基。覆蓋層座標存在「來源 PDF 的使用者空間」，連頁面自身的 `/Rotate` 都還沒套用，這樣 pdf-lib 匯出時不需要任何旋轉變換；代價是預覽與定位要套 `effective = pdfPage.rotate + page.rotation`
 - `src/core/signature/store.ts` — 簽名庫的 IndexedDB 存取，不可用時降級為 session 內有效
@@ -68,6 +75,13 @@ python3 scripts/make_fixtures.py     # tests/fixtures/ 被 .gitignore 排除，�
 
 PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有分頁都關閉才啟用，不會在操作到一半時重載而丟掉載入中的頁面；下次打開就是新版。
 
+## 偵測的已知限制
+
+以下兩種情況偵測都會失敗，並安全退回預設框，使用者仍可手動拖四角：
+
+1. 淺色紙放在淺色桌面：紙與桌面只差十幾個灰階，而紙上的文字與紙差一百多階，文件被自己的內容蓋掉。原型實測最強的四條線全是內部文字行
+2. 強烈陰影吞掉整條邊：原型實測文件的右、下、上三邊都找到了，左邊整條在陰影裡，取而代之的是陰影邊界本身
+
 ## 不支援的事
 
 - Word、Excel、PowerPoint 轉 PDF。需要伺服器端的排版引擎，使用者文件必須上傳，與零伺服器的前提衝突
@@ -76,7 +90,9 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - 一鍵套用簽名到所有頁面
 - 拍紙上的簽名。從照片去背做透明筆跡，白紙陰影與筆跡灰階重疊，門檻值一變就吃掉筆畫
 - 檔案庫與歷史紀錄。匯出即結束，不留存
-- 自動邊緣偵測。裁切框要手動對齊四個角
+- 取景時即時偵測。需要先把偵測降到 5ms 以內
+- 自動快門
+- 一次偵測多份文件
 - OCR
 - 多頁圖片打包成 ZIP。分割本來就刻意不引入 ZIP 概念，手機上 ZIP 也不好解
 - PNG 輸出。照片類影像存成 PNG 體積會大到不可用，圖片一律輸出 JPEG
@@ -90,6 +106,9 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - [ ] 開飛航模式後仍能開啟 app 並完成一次合併與匯出
 - [ ] 從相簿選取 HEIC 照片能正常轉成 PDF
 - [ ] 掃描時相機是後鏡頭
+- [ ] 在一般室內光線下拍放在深色桌面的文件，裁切框是否貼合（偵測的主要情境，合成素材測不到真實感光雜訊與鏡頭畸變）
+- [ ] 偵測失敗時提示是否出現，且預設框仍可用
+- [ ] 拖四角時放大鏡是否被手指擋住（桌機用滑鼠完全測不到，手指的遮蔽範圍比游標大得多）
 - [ ] 掃描三頁再加一份既有 PDF 合併，一趟流程完成，不需要匯出中間檔
 - [ ] VoiceOver 能單獨聚焦縮圖上的「簽名」、「旋轉」與「刪除」按鈕（根 div 帶著 dnd-kit 的 `role="button"`，裡面放真 button 是巢狀互動元素，螢幕閱讀器的行為只能真機驗）
 - [ ] 長按拖曳排序在觸控下正常，且不與頁面捲動衝突（自動化只測得到滑鼠拖曳）

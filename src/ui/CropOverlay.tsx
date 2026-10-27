@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Point, Quad } from '../core/scanner/geometry'
+import { LIMITS } from '../core/limits'
 
 type Props = {
   /** 被裁切影像的實際像素尺寸 */
@@ -15,6 +16,8 @@ const CORNER_LABELS = ['左上', '右上', '右下', '左下']
 
 export function CropOverlay({ imageWidth, imageHeight, backgroundUrl, quad, onChange }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
+  // 正在拖的角點索引，放大鏡依此顯示
+  const [dragging, setDragging] = useState<number | null>(null)
 
   // SVG 用 viewBox 縮放顯示，所以螢幕上的 44pt 換算回影像座標要先知道縮放比。
   // 用 ResizeObserver 追蹤，螢幕旋轉或視窗變化時會重新量。
@@ -50,6 +53,7 @@ export function CropOverlay({ imageWidth, imageHeight, backgroundUrl, quad, onCh
   const startDrag = (index: number) => (event: React.PointerEvent<SVGCircleElement>) => {
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
+    setDragging(index)
 
     const move = (e: PointerEvent) => {
       const next = [...quad] as Quad
@@ -57,6 +61,7 @@ export function CropOverlay({ imageWidth, imageHeight, backgroundUrl, quad, onCh
       onChange(next)
     }
     const end = () => {
+      setDragging(null)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', end)
       window.removeEventListener('pointercancel', end)
@@ -96,6 +101,36 @@ export function CropOverlay({ imageWidth, imageHeight, backgroundUrl, quad, onCh
           />
         </g>
       ))}
+      {dragging !== null && backgroundUrl && (() => {
+        const corner = quad[dragging]
+        const size = Math.min(imageWidth, imageHeight) * 0.3
+        const half = size / 2
+        // 角點在上半 → 放大鏡放下方；在下半 → 放上方
+        const onTopHalf = corner.y < imageHeight / 2
+        const boxX = imageWidth / 2 - half
+        const boxY = onTopHalf ? imageHeight - size - half * 0.2 : half * 0.2
+        const k = LIMITS.magnifierScale
+        return (
+          <g data-testid="crop-magnifier" pointerEvents="none">
+            <defs>
+              <clipPath id="magnifier-clip">
+                <rect x={boxX} y={boxY} width={size} height={size} rx={size * 0.08} />
+              </clipPath>
+            </defs>
+            <g clipPath="url(#magnifier-clip)">
+              <rect x={boxX} y={boxY} width={size} height={size} className="magnifier-bg" />
+              {/* 把角點周圍放大 k 倍後平移到放大鏡的中心 */}
+              <g transform={`translate(${boxX + half} ${boxY + half}) scale(${k}) translate(${-corner.x} ${-corner.y})`}>
+                <image href={backgroundUrl} x={0} y={0} width={imageWidth} height={imageHeight} />
+              </g>
+            </g>
+            {/* 十字準線，標出角點的確切位置 */}
+            <line x1={boxX + half} y1={boxY} x2={boxX + half} y2={boxY + size} className="magnifier-cross" />
+            <line x1={boxX} y1={boxY + half} x2={boxX + size} y2={boxY + half} className="magnifier-cross" />
+            <rect x={boxX} y={boxY} width={size} height={size} rx={size * 0.08} className="magnifier-frame" />
+          </g>
+        )
+      })()}
     </svg>
   )
 }
