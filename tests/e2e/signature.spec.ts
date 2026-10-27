@@ -114,10 +114,7 @@ test('旋轉 180 度後轉 JPEG，深色像素改到上半', async ({ page }) =>
   console.log('旋轉180', JSON.stringify(bands))
 })
 
-// 已知產品端問題：頁面已有覆蓋層時，再選簽名進定位畫面不會新增覆蓋層
-// （SignaturePlacer 只在 overlays 為空時才 onAdd），所以 UI 走不到第二個簽名。
-// 修好後把 test.fixme 改回 test。
-test.fixme('同一頁蓋兩個簽名', async ({ page }) => {
+test('同一頁蓋兩個簽名', async ({ page }) => {
   await openSign(page)
   await signNew(page)
   await done(page)
@@ -158,10 +155,7 @@ test('刪除簽名庫裡的簽名，已蓋上的覆蓋層也消失', async ({ pa
   await expect(page.locator('.thumb-signed')).toHaveCount(0)
 })
 
-// 已知產品端問題：頁面已有覆蓋層時，再選簽名進定位畫面不會新增覆蓋層
-// （SignaturePlacer 只在 overlays 為空時才 onAdd），所以 UI 走不到第二個簽名。
-// 修好後把 test.fixme 改回 test。
-test.fixme('每頁覆蓋層達上限後「簽名」按鈕 disabled', async ({ page }) => {
+test('每頁覆蓋層達上限後「簽名」按鈕 disabled', async ({ page }) => {
   await openSign(page)
   await signNew(page)
   await done(page)

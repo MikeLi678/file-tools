@@ -119,19 +119,20 @@ export function SignaturePlacer({
     }
   }, [signatures])
 
-  // 進畫面時若還沒有任何覆蓋層，先放一個在預設位置
+  // 從簽名庫挑一個簽名進來，就在預設位置放一個新的覆蓋層。
+  // 要調整既有的覆蓋層，是在這個畫面上點它來切換，不是靠這裡。
+  // 達到每頁上限時不再新增，改為選取最後一個讓使用者還能調整或刪除。
   useEffect(() => {
-    if (page.overlays.length > 0) {
-      setActiveId(current => current ?? page.overlays[page.overlays.length - 1].id)
+    if (page.overlays.length >= LIMITS.maxOverlaysPerPage) {
+      setActiveId(page.overlays[page.overlays.length - 1]?.id ?? null)
       return
     }
-    if (page.overlays.length >= LIMITS.maxOverlaysPerPage) return
     const aspectOf = signature.height / signature.width
     const box = clampOverlayBox({ x: (1 - DEFAULT_WIDTH) / 2, y: DEFAULT_Y, width: DEFAULT_WIDTH }, aspectOf, aspect)
     const overlay = { id: newId(), signatureId: signature.id, ...box }
     onAdd(overlay)
     setActiveId(overlay.id)
-    // 只在掛載時跑一次：之後的新增由使用者的動作觸發
+    // 只在掛載時跑一次：之後的新增由使用者再次進入這個畫面觸發
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
