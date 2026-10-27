@@ -2,6 +2,10 @@
 
 手機瀏覽器用的 PWA。合併 PDF、圖片轉 PDF、相機掃描、分割抽頁，全部在裝置本機完成，檔案不會上傳到任何伺服器。
 
+v1.2 新增：
+
+- 簽署文件：手寫簽名蓋到 PDF 或影像頁上，簽名存在裝置上可重複使用
+
 v1.1 新增：
 
 - PDF 轉圖片：挑出頁面轉成 JPEG，可一次分享多張
@@ -48,8 +52,15 @@ python3 scripts/make_fixtures.py     # tests/fixtures/ 被 .gitignore 排除，�
 - `src/core/scanner/geometry.ts` — 透視校正，純函式
 - `src/core/scanner/filters.ts` — 影像增強，純函式
 - `src/core/pdfjs.ts` — pdf.js 的 worker 只能設定一次，這裡集中設定；是 thumbnailer 與 pageToImage 唯一真正共用的東西
+- `src/core/signature/geometry.ts` — 座標轉換，整個簽名功能的地基。覆蓋層座標存在「來源 PDF 的使用者空間」，連頁面自身的 `/Rotate` 都還沒套用，這樣 pdf-lib 匯出時不需要任何旋轉變換；代價是預覽與定位要套 `effective = pdfPage.rotate + page.rotation`
+- `src/core/signature/store.ts` — 簽名庫的 IndexedDB 存取，不可用時降級為 session 內有效
+- `src/core/signature/capture.ts` — 手寫折線轉成裁切後的透明 PNG
 - `src/core/pageToImage.ts` — PDF 頁面轉 JPEG，序列渲染、逐頁釋放 canvas
 - `src/core/thumbnailer.ts`、`src/core/scanner/camera.ts`、`src/core/output.ts` — 瀏覽器專屬的轉接層
+
+### 持久化的界線
+
+只有簽名圖存在 IndexedDB。處理中的文件與覆蓋層位置完全不留存，重新載入就沒了。這是 v1「檔案不留存」原則的唯一例外。
 
 純函式層不依賴任何瀏覽器 API，所以 PDF 正確性這件最重要的事能在 Node 下完整測試。
 
@@ -60,6 +71,10 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 ## 不支援的事
 
 - Word、Excel、PowerPoint 轉 PDF。需要伺服器端的排版引擎，使用者文件必須上傳，與零伺服器的前提衝突
+- 文字與日期覆蓋層。中文需內嵌字型，思源黑體子集化後仍約 2-5 MB，會打進 service worker 預快取
+- 數位簽章（PKI）。這裡做的是視覺上的手寫簽名
+- 一鍵套用簽名到所有頁面
+- 拍紙上的簽名。從照片去背做透明筆跡，白紙陰影與筆跡灰階重疊，門檻值一變就吃掉筆畫
 - 檔案庫與歷史紀錄。匯出即結束，不留存
 - 自動邊緣偵測。裁切框要手動對齊四個角
 - OCR
@@ -87,6 +102,10 @@ PWA 用 `prompt` 模式。發佈新版後，新的 service worker 會等所有�
 - [ ] **20 頁的多檔分享 iOS 撐不撐得住**（`LIMITS.maxImageExportPages` 這個數字是估計值，依實測調整）
 - [ ] 2000px 的 JPEG 在 iPhone 上渲染 20 頁的實際耗時與記憶體峰值
 - [ ] 自訂檔名含中文時，存進「檔案」App 後顯示是否正確
+- [ ] 手指簽名的流暢度與線條品質（桌機用滑鼠完全測不到真實手感）
+- [ ] 簽名在 iOS 的「檔案」App 與 Mail 預覽裡位置是否正確（不同檢視器對 `/Rotate` 的處理不一致）
+- [ ] 帶 `/Rotate` 的來源 PDF 簽名後位置是否正確（座標系統最容易錯的情境）
+- [ ] 無痕模式下的降級提示是否出現，且簽名仍可使用
 
 ## 部署
 
